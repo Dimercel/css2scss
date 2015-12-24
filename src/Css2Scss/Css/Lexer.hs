@@ -4,12 +4,13 @@ module Css2Scss.Css.Lexer
     ) where
 
 import Text.ParserCombinators.Parsec
+import Text.Parsec.Char
 
 data Token = H String | Nonascii String deriving (Eq, Show)
 
 h :: Parser Token
 h = do
-    hex <- many (oneOf $ ['a'..'f'] ++ ['A'..'F'] ++ ['0'..'9'])
+    hex <- many hexDigit
     return $ H hex
 
 nonascii :: Parser Token

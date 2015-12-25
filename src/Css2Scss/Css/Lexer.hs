@@ -1,6 +1,7 @@
 module Css2Scss.Css.Lexer
     ( Token (..)
     , h
+    , nonascii
     ) where
 
 import Text.ParserCombinators.Parsec

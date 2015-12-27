@@ -2,6 +2,7 @@ module Css2Scss.Css.Lexer
     ( Token (..)
     , h
     , nonascii
+    , unicode
     ) where
 
 import Text.ParserCombinators.Parsec
@@ -9,12 +10,17 @@ import Text.Parsec.Char
 
 data Token = H String | Nonascii String deriving (Eq, Show)
 
-h :: Parser Token
-h = do
-    hex <- many hexDigit
-    return $ H hex
+h :: Parser Char
+h = hexDigit
 
-nonascii :: Parser Token
+nonascii :: Parser String
 nonascii = do
-        s <- many (oneOf ['\200'..'\377'])
-        return $ Nonascii s
+        count 1 (satisfy (\x -> x >= '\o240' && x <= '\o4177777'))
+
+unicode :: Parser String
+unicode = do
+        initial <- count 1 (oneOf "\\")
+        hex <- try (count 6 h)
+            <|> many1 h
+        end <- try (count 1 (oneOf " \t\r\n\f"))
+        return $ concat [initial, hex, end]

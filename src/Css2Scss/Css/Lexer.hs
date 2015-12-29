@@ -35,7 +35,7 @@ escape = do
         try unicode
         <|> do
                 initial <- count 1 (oneOf "\\")
-                symbol <- count 1 (oneOf $ ['\o240'..'\o4177777'] ++ "-~")
+                symbol <- count 1 (oneOf $ "-~" ++ ['\o240'..'\o4177777'])
                 return $ concat [initial, symbol]
         <?> "escape"
 
@@ -48,7 +48,7 @@ nmstart = do
 
 nmchar :: Parser String
 nmchar = do
-        count 1 (oneOf $ ['a'..'z'] ++ ['0'..'9'] ++ "-")
+        count 1 (oneOf $ "-" ++ ['0'..'9'] ++ ['a'..'z'])
         <|> nonascii
         <|> escape
         <?> "nmchar"

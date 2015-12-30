@@ -2,18 +2,12 @@ module Css2Scss.Test.Lexer (run) where
 
 
 import Data.List
+import Data.Either
 import Test.Hspec
 import Text.ParserCombinators.Parsec
 
 import Css2Scss.Css.Lexer as L
 
-isRight :: Either a b -> Bool
-isRight x = case x of
-                Left _ -> False
-                Right _ -> True
-
-isLeft :: Either a b -> Bool
-isLeft x = not $ isRight x
 
 run :: IO ()
 run = hspec $ do

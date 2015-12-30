@@ -7,16 +7,61 @@ import Text.ParserCombinators.Parsec
 
 import Css2Scss.Css.Lexer as L
 
+isRight :: Either a b -> Bool
+isRight x = case x of
+                Left _ -> False
+                Right _ -> True
+
+isLeft :: Either a b -> Bool
+isLeft x = not $ isRight x
 
 run :: IO ()
 run = hspec $ do
     describe "Tests for Lexer" $ do
         it "Test for all hex digits" $ do
-            let predicate x = parse L.h "test" [x] == Right x
-                in take 22 (cycle [True]) == foldl' (\acc x ->
-                    (predicate x) : acc) [] "0123456789abcdefABCDEF"
+            let parseResult = foldr (\x acc -> (parse L.h "test" [x]) : acc) [] "0123456789abcdefABCDEF"
+            all (isRight) parseResult
 
         it "Test for wrong hex digits" $ do
-            case parse L.h "test" "g" of
-                Left _ -> True
-                Right _ -> False
+            let parseResult = foldr (\x acc -> (parse L.h "test" [x]) : acc) [] "-+`GHIjkl"
+            all (isLeft) parseResult
+
+        it "Test for non ascii" $ do
+            let parseResult = foldr (\x acc -> (parse L.nonascii "test" [x]) : acc) [] "\o240\o10000\o4177777"
+            all (isRight) parseResult
+
+        it "Test for wrong non ascii" $ do
+            let parseResult = foldr (\x acc -> (parse L.nonascii "test" [x]) : acc) [] "\o0\o239"
+            all (isLeft) parseResult
+
+        it "Test for unicode" $ do
+            let parseResult = foldr (\x acc -> (parse L.unicode "test" x) : acc) [] ["\\4cecCd", "\\ccc "]
+            all (isRight) parseResult
+
+        it "Test for wrong unicode" $ do
+            let parseResult = foldr (\x acc -> (parse L.unicode "test" x) : acc) [] ["\\4ceczz", "ccc "]
+            all (isLeft) parseResult
+
+        it "Test for escape" $ do
+            let parseResult = foldr (\x acc -> (parse L.escape "test" x) : acc) [] ["\\ccc\t", "\\-", "\\\o241"]
+            all (isRight) parseResult
+
+        it "Test for wrong escape" $ do
+            let parseResult = foldr (\x acc -> (parse L.escape "test" x) : acc) [] ["ccc", "\\a", "\\x"]
+            all (isLeft) parseResult
+
+        it "Test for nmstart" $ do
+            let parseResult = foldr (\x acc -> (parse L.nmstart "test" x) : acc) [] ["a", "\o241", "\\~"]
+            all (isRight) parseResult
+
+        it "Test for wrong nmstart" $ do
+            let parseResult = foldr (\x acc -> (parse L.nmstart "test" x) : acc) [] ["-", "\o239", "\\+"]
+            all (isLeft) parseResult
+
+        it "Test for nmchar" $ do
+            let parseResult = foldr (\x acc -> (parse L.nmchar "test" x) : acc) [] ["-", "1", "\o241", "\\-"]
+            all (isRight) parseResult
+
+        it "Test for wrong nmchar" $ do
+            let parseResult = foldr (\x acc -> (parse L.nmchar "test" x) : acc) [] ["+", "\o239", "\\%"]
+            all (isLeft) parseResult

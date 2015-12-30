@@ -26,7 +26,7 @@ unicode = do
         initial <- count 1 (oneOf "\\")
         hex <- try (count 6 h)
             <|> many1 h
-        end <- try (count 1 (oneOf " \t\r\n\f"))
+        end <- option "" (count 1 (oneOf " \t\r\n\f"))
         return $ concat [initial, hex, end]
         <?> "unicode"
 

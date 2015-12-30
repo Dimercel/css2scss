@@ -39,7 +39,7 @@ run = hspec $ do
             all (isRight) parseResult
 
         it "Test for wrong unicode" $ do
-            let parseResult = foldr (\x acc -> (parse L.unicode "test" x) : acc) [] ["\\4ceczz", "ccc "]
+            let parseResult = foldr (\x acc -> (parse L.unicode "test" x) : acc) [] ["\\zz", "ccc "]
             all (isLeft) parseResult
 
         it "Test for escape" $ do
@@ -47,7 +47,7 @@ run = hspec $ do
             all (isRight) parseResult
 
         it "Test for wrong escape" $ do
-            let parseResult = foldr (\x acc -> (parse L.escape "test" x) : acc) [] ["ccc", "\\a", "\\x"]
+            let parseResult = foldr (\x acc -> (parse L.escape "test" x) : acc) [] ["ccc", "\\+"]
             all (isLeft) parseResult
 
         it "Test for nmstart" $ do

@@ -13,49 +13,65 @@ run :: IO ()
 run = hspec $ do
     describe "Tests for Lexer" $ do
         it "Test for all hex digits" $ do
-            let parseResult = foldr (\x acc -> (parse L.h "test" [x]) : acc) [] "0123456789abcdefABCDEF"
+            let parseResult = map (\x -> parse L.h "test" [x]) "0123456789abcdefABCDEF"
             all (isRight) parseResult
 
         it "Test for wrong hex digits" $ do
-            let parseResult = foldr (\x acc -> (parse L.h "test" [x]) : acc) [] "-+`GHIjkl"
+            let parseResult = map (\x -> parse L.h "test" [x]) "-+`GHIjkl"
             all (isLeft) parseResult
 
         it "Test for non ascii" $ do
-            let parseResult = foldr (\x acc -> (parse L.nonascii "test" [x]) : acc) [] "\o240\o10000\o4177777"
+            let parseResult = map (\x -> parse L.nonascii "test" [x]) "\o240\o10000\o4177777"
             all (isRight) parseResult
 
         it "Test for wrong non ascii" $ do
-            let parseResult = foldr (\x acc -> (parse L.nonascii "test" [x]) : acc) [] "\o0\o239"
+            let parseResult = map (\x -> parse L.nonascii "test" [x]) "\o0\o239"
             all (isLeft) parseResult
 
         it "Test for unicode" $ do
-            let parseResult = foldr (\x acc -> (parse L.unicode "test" x) : acc) [] ["\\4cecCd", "\\ccc "]
+            let parseResult = map (\x -> parse L.unicode "test" x) ["\\4cecCd", "\\ccc "]
             all (isRight) parseResult
 
         it "Test for wrong unicode" $ do
-            let parseResult = foldr (\x acc -> (parse L.unicode "test" x) : acc) [] ["\\zz", "ccc "]
+            let parseResult = map (\x -> parse L.unicode "test" x) ["\\zz", "ccc "]
             all (isLeft) parseResult
 
         it "Test for escape" $ do
-            let parseResult = foldr (\x acc -> (parse L.escape "test" x) : acc) [] ["\\ccc\t", "\\-", "\\\o241"]
+            let parseResult = map (\x -> parse L.escape "test" x) ["\\ccc\t", "\\-", "\\\o241"]
             all (isRight) parseResult
 
         it "Test for wrong escape" $ do
-            let parseResult = foldr (\x acc -> (parse L.escape "test" x) : acc) [] ["ccc", "\\+"]
+            let parseResult = map (\x -> parse L.escape "test" x) ["ccc", "\\+"]
             all (isLeft) parseResult
 
         it "Test for nmstart" $ do
-            let parseResult = foldr (\x acc -> (parse L.nmstart "test" x) : acc) [] ["a", "\o241", "\\~"]
+            let parseResult = map (\x -> parse L.nmstart "test" x) ["a", "\o241", "\\~"]
             all (isRight) parseResult
 
         it "Test for wrong nmstart" $ do
-            let parseResult = foldr (\x acc -> (parse L.nmstart "test" x) : acc) [] ["-", "\o239", "\\+"]
+            let parseResult = map (\x -> parse L.nmstart "test" x) ["-", "\o239", "\\+"]
             all (isLeft) parseResult
 
         it "Test for nmchar" $ do
-            let parseResult = foldr (\x acc -> (parse L.nmchar "test" x) : acc) [] ["-", "1", "\o241", "\\-"]
+            let parseResult = map (\x -> parse L.nmchar "test" x) ["-", "1", "\o241", "\\-"]
             all (isRight) parseResult
 
         it "Test for wrong nmchar" $ do
-            let parseResult = foldr (\x acc -> (parse L.nmchar "test" x) : acc) [] ["+", "\o239", "\\%"]
+            let parseResult = map (\x -> parse L.nmchar "test" x) ["+", "\o239", "\\%"]
+            all (isLeft) parseResult
+
+        it "Test for string1" $ do
+            let parseResult = map (\x -> parse L.string1 "test" x) ["\"\t\"", "\"\t\\\r\"", "\"\o241\o242\'\"" ]
+            all (isRight) parseResult
+
+        it "Test for wrong string1" $ do
+            let parseResult = map (\x -> parse L.string1 "test" x) ["\"abc\"", "\"\ta\""]
+            all (isLeft) parseResult
+
+        it "Test for nl" $ do
+            let parseResult = map (\x -> parse L.nl "test" x) ["\n", "\r", "\f", "\r\n" ]
+            all (isRight) parseResult
+
+        it "Test for wrong nl" $ do
+            let parseResult = map (\x -> parse L.string1 "test" x) ["a", "\o200", "\t"]
             all (isLeft) parseResult

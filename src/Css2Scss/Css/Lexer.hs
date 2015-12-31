@@ -6,6 +6,8 @@ module Css2Scss.Css.Lexer
     , escape
     , nmstart
     , nmchar
+    , string1
+    , nl
     ) where
 
 import Text.ParserCombinators.Parsec
@@ -52,3 +54,25 @@ nmchar = do
         <|> nonascii
         <|> escape
         <?> "nmchar"
+
+string1 :: Parser String
+string1 = do
+        string "\""
+        content <- many $ do
+            count 1 (oneOf "\t !#$%&(-~")
+            <|> do
+                    string "\\"
+                    nl_cont <- nl
+                    return $ concat ["\\", nl_cont]
+            <|> string "\'"
+            <|> nonascii
+            <|> escape
+        string "\""
+        return $ concat ["\"", concat content, "\""]
+        <?> "string1"
+
+nl :: Parser String
+nl = do
+        count 1 (oneOf "\n\r\f")
+        <|> string "\r\n"
+        <?> "nl"

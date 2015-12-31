@@ -7,6 +7,10 @@ module Css2Scss.Css.Lexer
     , nmstart
     , nmchar
     , string1
+    , string2
+    , ident
+    , name
+    , num
     , nl
     ) where
 
@@ -70,6 +74,46 @@ string1 = do
         string "\""
         return $ concat ["\"", concat content, "\""]
         <?> "string1"
+
+string2 :: Parser String
+string2 = do
+        string "\'"
+        content <- many $ do
+            count 1 (oneOf "\t !#$%&(-~")
+            <|> do
+                    string "\\"
+                    nl_cont <- nl
+                    return $ concat ["\\", nl_cont]
+            <|> string "\""
+            <|> nonascii
+            <|> escape
+        string "\'"
+        return $ concat ["\'", concat content, "\'"]
+        <?> "string2"
+
+ident :: Parser String
+ident = do
+        minus <- option "" (string "-")
+        first <- nmstart
+        any <- many nmchar
+        return $ concat [minus, first, concat any]
+        <?> "ident"
+
+name :: Parser String
+name = do
+        name_sym <- many1 nmchar
+        return $ concat name_sym
+        <?> "name"
+
+num :: Parser String
+num = do
+        many1 (oneOf ['0'..'9'])
+        <|> do
+            int <- many (oneOf ['0'..'9'])
+            string "."
+            fraction <- many1 (oneOf ['0'..'9'])
+            return $ concat [int, ".", fraction]
+        <?> "num"
 
 nl :: Parser String
 nl = do

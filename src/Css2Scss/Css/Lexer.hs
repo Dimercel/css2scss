@@ -15,6 +15,33 @@ module Css2Scss.Css.Lexer
     , url
     , nl
     , w
+    , _S
+    , _CDO
+    , _CDC
+    , _INCLUDES
+    , _DASHMATCH
+    , _STRING
+    , _IDENT
+    , _HASH
+    , _IMPORT_SYM
+    , _PAGE_SYM
+    , _MEDIA_SYM
+    , _FONT_FACE_SYM
+    , _CHARSET_SYM
+    , _NAMESPACE_SYM
+    , _IMPORTANT_SYM
+    , _EMS
+    , _EXS
+    , _LENGTH
+    , _ANGLE
+    , _TIME
+    , _FREQ
+    , _DIMEN
+    , _PERCENTAGE
+    , _NUMBER
+    , _URI
+    , _FUNCTION
+    , _UNICODERANGE
     ) where
 
 import Text.ParserCombinators.Parsec
@@ -272,6 +299,12 @@ _URI = do
         sp2 <- w
         string "\")"
         return $ concat ["url(\"", sp1, s, sp2, "\")"]
+
+_FUNCTION :: Parser String
+_FUNCTION = do
+        i <- ident
+        char '('
+        return $ concat [i, "("]
 
 _UNICODERANGE :: Parser String
 _UNICODERANGE = do

@@ -204,71 +204,97 @@ range = do
         return ""
         <?> "range"
 
-_S :: Parser String
-_S = many1 $ oneOf " \t\r\n\f"
+_S :: Parser Token
+_S = do
+        s <- many1 $ (oneOf " \t\r\n\f")
+        return $ S s
 
-_CDO :: Parser String
-_CDO = string "<!--"
+_CDO :: Parser Token
+_CDO = do
+        string "<!--"
+        return $ Cdo "<!--"
 
-_CDC :: Parser String
-_CDC = string "-->"
+_CDC :: Parser Token
+_CDC = do
+        string "-->"
+        return $ Cdc "-->"
 
-_INCLUDES :: Parser String
-_INCLUDES = string "~="
+_INCLUDES :: Parser Token
+_INCLUDES = do
+        string "~="
+        return $ Includes "~="
 
-_DASHMATCH :: Parser String
-_DASHMATCH = string "|="
+_DASHMATCH :: Parser Token
+_DASHMATCH = do
+        string "|="
+        return $ Dashmatch "|="
 
-_STRING ::Parser String
-_STRING = _string
+_STRING ::Parser Token
+_STRING = do
+        s <- _string
+        return $ String' s
 
-_IDENT :: Parser String
-_IDENT = ident
+_IDENT :: Parser Token
+_IDENT = do
+        i <- ident
+        return $ Ident i
 
-_HASH :: Parser String
+_HASH :: Parser Token
 _HASH = do
         string "#"
         hashname <- name
-        return $ concat ["#", hashname]
+        return $ Hash (concat ["#", hashname])
 
-_IMPORT_SYM :: Parser String
-_IMPORT_SYM = string "@import"
+_IMPORT_SYM :: Parser Token
+_IMPORT_SYM = do
+        string "@import"
+        return $ ImportSym "@import"
 
-_PAGE_SYM :: Parser String
-_PAGE_SYM = string "@page"
+_PAGE_SYM :: Parser Token
+_PAGE_SYM = do
+        string "@page"
+        return $ PageSym "@page"
 
-_MEDIA_SYM :: Parser String
-_MEDIA_SYM = string "@media"
+_MEDIA_SYM :: Parser Token
+_MEDIA_SYM = do
+        string "@media"
+        return $ MediaSym "@media"
 
-_FONT_FACE_SYM :: Parser String
-_FONT_FACE_SYM = string "@font-face"
+_FONT_FACE_SYM :: Parser Token
+_FONT_FACE_SYM = do
+        string "@font-face"
+        return $ FontFaceSym "@font-face"
 
-_CHARSET_SYM :: Parser String
-_CHARSET_SYM = string "@charset"
+_CHARSET_SYM :: Parser Token
+_CHARSET_SYM = do
+        string "@charset"
+        return $ CharsetSym "@charset"
 
-_NAMESPACE_SYM :: Parser String
-_NAMESPACE_SYM = string "@namespace"
+_NAMESPACE_SYM :: Parser Token
+_NAMESPACE_SYM = do
+        string "@namespace"
+        return $ NamespaceSym "@namespace"
 
-_IMPORTANT_SYM :: Parser String
+_IMPORTANT_SYM :: Parser Token
 _IMPORTANT_SYM = do
         char '!'
         space <- w
         string "important"
-        return $ concat ["!", space, "important"]
+        return $ ImportantSym (concat ["!", space, "important"])
 
-_EMS :: Parser String
+_EMS :: Parser Token
 _EMS = do
         n <- num
         string "em"
-        return $ concat [n, "em"]
+        return $ Ems (concat [n, "em"])
 
-_EXS :: Parser String
+_EXS :: Parser Token
 _EXS = do
         n <- num
         string "ex"
-        return $ concat [n, "em"]
+        return $ Exs (concat [n, "em"])
 
-_LENGTH :: Parser String
+_LENGTH :: Parser Token
 _LENGTH = do
         n <- num
         u <- string "px"
@@ -277,47 +303,49 @@ _LENGTH = do
             <|> string "in"
             <|> string "pt"
             <|> string "pc"
-        return $ concat [n,u]
+        return $ Length (concat [n,u])
 
-_ANGLE :: Parser String
+_ANGLE :: Parser Token
 _ANGLE = do
         n <- num
         u <- string "deg"
             <|> string "rad"
             <|> string "grad"
-        return $ concat [n,u]
+        return $ Angle (concat [n,u])
 
-_TIME :: Parser String
+_TIME :: Parser Token
 _TIME = do
         n <- num
         u <- string "ms"
             <|> string "s"
-        return $ concat [n,u]
+        return $ Time (concat [n,u])
 
 
-_FREQ :: Parser String
+_FREQ :: Parser Token
 _FREQ = do
         n <- num
         u <- string "Hz"
             <|> string "kHz"
-        return $ concat [n,u]
+        return $ Freq (concat [n,u])
 
-_DIMEN :: Parser String
+_DIMEN :: Parser Token
 _DIMEN = do
         n <- num
         i <- ident
-        return $ concat [n, i]
+        return $ Dimen (concat [n, i])
 
-_PERCENTAGE :: Parser String
+_PERCENTAGE :: Parser Token
 _PERCENTAGE = do
         n <- num
         char '%'
-        return $ concat [n, "%"]
+        return $ Percentage (concat [n, "%"])
 
-_NUMBER :: Parser String
-_NUMBER = num
+_NUMBER :: Parser Token
+_NUMBER = do
+        n <- num
+        return $ Number n
 
-_URI :: Parser String
+_URI :: Parser Token
 _URI = do
         string "url(\""
         sp1 <- w
@@ -326,15 +354,15 @@ _URI = do
                 <|> url
         sp2 <- w
         string "\")"
-        return $ concat ["url(\"", sp1, s, sp2, "\")"]
+        return $ Uri (concat ["url(\"", sp1, s, sp2, "\")"])
 
-_FUNCTION :: Parser String
+_FUNCTION :: Parser Token
 _FUNCTION = do
         i <- ident
         char '('
-        return $ concat [i, "("]
+        return $ Function (concat [i, "("])
 
-_UNICODERANGE :: Parser String
+_UNICODERANGE :: Parser Token
 _UNICODERANGE = do
         string "U+"
         start <- do
@@ -344,4 +372,4 @@ _UNICODERANGE = do
         end <- do
             try (count 6 h)
             <|> many1 h
-        return $ concat ["U+", start, "-", end]
+        return $ UnicodeRange (concat ["U+", start, "-", end])

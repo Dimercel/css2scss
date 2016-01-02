@@ -47,7 +47,35 @@ module Css2Scss.Css.Lexer
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Char
 
-data Token = H String | Nonascii String deriving (Eq, Show)
+data Token = S String
+           | Cdo String
+           | Cdc String
+           | Includes String
+           | Dashmatch String
+           | String' String
+           | Ident String
+           | Hash String
+           | ImportSym String
+           | PageSym String
+           | MediaSym String
+           | FontFaceSym String
+           | CharsetSym String
+           | NamespaceSym String
+           | ImportantSym String
+           | Ems String
+           | Exs String
+           | Length String
+           | Angle String
+           | Time String
+           | Freq String
+           | Dimen String
+           | Percentage String
+           | Number String
+           | Uri String
+           | Function String
+           | UnicodeRange String
+           deriving (Eq, Show)
+
 
 h :: Parser Char
 h = hexDigit <?> "h"

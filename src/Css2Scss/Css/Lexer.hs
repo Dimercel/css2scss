@@ -11,7 +11,10 @@ module Css2Scss.Css.Lexer
     , ident
     , name
     , num
+    , _string
+    , url
     , nl
+    , w
     ) where
 
 import Text.ParserCombinators.Parsec
@@ -115,8 +118,169 @@ num = do
             return $ concat [int, ".", fraction]
         <?> "num"
 
+_string :: Parser String
+_string = do
+        string1
+        <|> string2
+        <?> "_string"
+
+url :: Parser String
+url = do
+        content <- many $ do
+            count 1 (oneOf "!#$%&*-~")
+            <|> nonascii
+            <|> escape
+        return $ concat content
+        <?> "url"
+
+w :: Parser String
+w = do
+        many (oneOf " \t\r\n\f")
+        <?> "w"
+
 nl :: Parser String
 nl = do
         count 1 (oneOf "\n\r\f")
         <|> string "\r\n"
         <?> "nl"
+
+range :: Parser String
+range = do
+        return ""
+        <?> "range"
+
+_S :: Parser String
+_S = many1 $ oneOf " \t\r\n\f"
+
+_CDO :: Parser String
+_CDO = string "<!--"
+
+_CDC :: Parser String
+_CDC = string "-->"
+
+_INCLUDES :: Parser String
+_INCLUDES = string "~="
+
+_DASHMATCH :: Parser String
+_DASHMATCH = string "|="
+
+_STRING ::Parser String
+_STRING = _string
+
+_IDENT :: Parser String
+_IDENT = ident
+
+_HASH :: Parser String
+_HASH = do
+        string "#"
+        hashname <- name
+        return $ concat ["#", hashname]
+
+_IMPORT_SYM :: Parser String
+_IMPORT_SYM = string "@import"
+
+_PAGE_SYM :: Parser String
+_PAGE_SYM = string "@page"
+
+_MEDIA_SYM :: Parser String
+_MEDIA_SYM = string "@media"
+
+_FONT_FACE_SYM :: Parser String
+_FONT_FACE_SYM = string "@font-face"
+
+_CHARSET_SYM :: Parser String
+_CHARSET_SYM = string "@charset"
+
+_NAMESPACE_SYM :: Parser String
+_NAMESPACE_SYM = string "@namespace"
+
+_IMPORTANT_SYM :: Parser String
+_IMPORTANT_SYM = do
+        char '!'
+        space <- w
+        string "important"
+        return $ concat ["!", space, "important"]
+
+_EMS :: Parser String
+_EMS = do
+        n <- num
+        string "em"
+        return $ concat [n, "em"]
+
+_EXS :: Parser String
+_EXS = do
+        n <- num
+        string "ex"
+        return $ concat [n, "em"]
+
+_LENGTH :: Parser String
+_LENGTH = do
+        n <- num
+        u <- string "px"
+            <|> string "cm"
+            <|> string "mm"
+            <|> string "in"
+            <|> string "pt"
+            <|> string "pc"
+        return $ concat [n,u]
+
+_ANGLE :: Parser String
+_ANGLE = do
+        n <- num
+        u <- string "deg"
+            <|> string "rad"
+            <|> string "grad"
+        return $ concat [n,u]
+
+_TIME :: Parser String
+_TIME = do
+        n <- num
+        u <- string "ms"
+            <|> string "s"
+        return $ concat [n,u]
+
+
+_FREQ :: Parser String
+_FREQ = do
+        n <- num
+        u <- string "Hz"
+            <|> string "kHz"
+        return $ concat [n,u]
+
+_DIMEN :: Parser String
+_DIMEN = do
+        n <- num
+        i <- ident
+        return $ concat [n, i]
+
+_PERCENTAGE :: Parser String
+_PERCENTAGE = do
+        n <- num
+        char '%'
+        return $ concat [n, "%"]
+
+_NUMBER :: Parser String
+_NUMBER = num
+
+_URI :: Parser String
+_URI = do
+        string "url(\""
+        sp1 <- w
+        s <- do
+                _string
+                <|> url
+        sp2 <- w
+        string "\")"
+        return $ concat ["url(\"", sp1, s, sp2, "\")"]
+
+_UNICODERANGE :: Parser String
+_UNICODERANGE = do
+        string "U+"
+        start <- do
+            try (count 6 h)
+            <|> many1 h
+        char '-'
+        end <- do
+            try (count 6 h)
+            <|> many1 h
+        return $ concat ["U+", start, "-", end]

@@ -100,10 +100,30 @@ run = hspec $ do
             let parseResult = map (\x -> parse L.num "test" x) ["-4", ".a", ".a"]
             all (isLeft) parseResult
 
+        it "Test for string" $ do
+            let parseResult = map (\x -> parse L._string "test" x) ["\"\t\'\o240\"", "\'!\"\o240\'"]
+            all (isRight) parseResult
+
+        it "Test for wrong string" $ do
+            let parseResult = map (\x -> parse L._string "test" x) ["\'!!!\"", "\"!!!\'"]
+            all (isLeft) parseResult
+
+        it "Test for url" $ do
+            let parseResult = map (\x -> parse L.url "test" x) ["!\o240\o241\\22\r", "url"]
+            all (isRight) parseResult
+
+        it "Test for wrong url" $ do
+            let parseResult = map (\x -> parse L.url "test" x) ["\\test"]
+            all (isLeft) parseResult
+
+        it "Test for w" $ do
+            let parseResult = map (\x -> parse L.w "test" x) [" \t", "\f"]
+            all (isRight) parseResult
+
         it "Test for nl" $ do
             let parseResult = map (\x -> parse L.nl "test" x) ["\n", "\r", "\f", "\r\n" ]
             all (isRight) parseResult
 
         it "Test for wrong nl" $ do
-            let parseResult = map (\x -> parse L.string1 "test" x) ["a", "\o200", "\t"]
+            let parseResult = map (\x -> parse L.nl "test" x) ["a", "\o200", "\t"]
             all (isLeft) parseResult

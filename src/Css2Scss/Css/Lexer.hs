@@ -29,7 +29,7 @@ nonascii = do
 
 unicode :: Parser String
 unicode = do
-        initial <- count 1 (oneOf "\\")
+        initial <- string "\\"
         hex <- try (count 6 h)
             <|> many1 h
         end <- option "" (count 1 (oneOf " \t\r\n\f"))
@@ -40,7 +40,7 @@ escape :: Parser String
 escape = do
         try unicode
         <|> do
-                initial <- count 1 (oneOf "\\")
+                initial <- string "\\"
                 symbol <- count 1 (oneOf $ "-~" ++ ['\o240'..'\o4177777'])
                 return $ concat [initial, symbol]
         <?> "escape"

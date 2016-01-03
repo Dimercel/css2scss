@@ -1,6 +1,11 @@
-module Css2Scss.Css.Parser 
+module Css2Scss.Css.Parser
     ( stylesheet
     , property
+    , operator
+    , unary_operator
+    , declaration
+    , prio
+    , expr
     , term
     , function
     , hexcolor
@@ -15,35 +20,71 @@ stylesheet :: String -> String
 stylesheet _ = "It is work!"
 
 property :: Parser [L.Token]
-property = do
-        i <- L._IDENT
-        s <- many L._S
-        return $ i:s
+property = ((:) <$> L._IDENT <*> many L._S)
+
+operator :: Parser [L.Token]
+operator = do
+        (:) <$> L._STATIC "/" <*> many L._S
+        <|> (:) <$> L._STATIC "," <*> many L._S
+        <|> return []
+
+
+unary_operator :: Parser [L.Token]
+unary_operator = do
+        s <- count 1 (oneOf "+-")
+        return $ [L.Static s]
+
+declaration :: Parser [L.Token]
+declaration = do
+         do
+            p <- property
+            sep <- L._STATIC ":"
+            s <- many L._S
+            e <- expr
+            pr <- option [] prio
+            return $ concat [p, [sep], s, e, pr]
+        <|> return []
+
+prio :: Parser [L.Token]
+prio =  ((:) <$> L._IMPORTANT_SYM <*> many L._S)
+
+expr :: Parser [L.Token]
+expr = do
+        t <- term
+        o <- many $ do
+            o' <- operator
+            t' <- term
+            return $ o' ++ t'
+        return $ t ++ (concat o)
 
 term :: Parser [L.Token]
 term = do
         uo <- option [] unary_operator
-        n <- do
-            L._NUMBER
-            <|> L._PERCENTAGE
-            <|> L._LENGTH
-            <|> L._EMS
-            <|> L._EXS
-            <|> L._ANGLE
-            <|> L._TIME
-            <|> L._FREQ
-            <|> function
-            many L._S
-        return $ n
+        x <- do
+            try hexcolor
+            <|> try ((:) <$> L._UNICODERANGE <*> many L._S)
+            <|> try ((:) <$> L._URI <*> many L._S)
+            <|> try ((:) <$> L._IDENT <*> many L._S)
+            <|> do
+                    try function
+                    <|> try ((:) <$> L._PERCENTAGE <*> many L._S)
+                    <|> try ((:) <$> L._LENGTH <*> many L._S)
+                    <|> try ((:) <$> L._EMS <*> many L._S)
+                    <|> try ((:) <$> L._EXS <*> many L._S)
+                    <|> try ((:) <$> L._ANGLE <*> many L._S)
+                    <|> try ((:) <$> L._TIME <*> many L._S)
+                    <|> try ((:) <$> L._FREQ <*> many L._S)
+                    <|> try ((:) <$> L._NUMBER <*> many L._S)
+            <|> (:) <$> L._STRING <*> many L._S
+        return $ uo ++ x
 
 function :: Parser [L.Token]
 function = do
-        f <- L._FUNCTION
-        s1 <- L._S
+        f <- (:) <$> L._FUNCTION <*> many L._S
         e <- expr
         char ')'
-        s2 <- L._S
-        return $ [f, s1] ++ e ++ [s2]
+        s2 <- many L._S
+        return $ f ++ e ++ [L.Static ")"] ++ s2
 
 hexcolor :: Parser [L.Token]
 hexcolor = do

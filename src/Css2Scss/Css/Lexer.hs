@@ -42,6 +42,7 @@ module Css2Scss.Css.Lexer
     , _URI
     , _FUNCTION
     , _UNICODERANGE
+    , _STATIC
     ) where
 
 import Text.ParserCombinators.Parsec
@@ -74,6 +75,7 @@ data Token = S String
            | Uri String
            | Function String
            | UnicodeRange String
+           | Static String
            deriving (Eq, Show)
 
 
@@ -373,3 +375,8 @@ _UNICODERANGE = do
             try (count 6 h)
             <|> many1 h
         return $ UnicodeRange (concat ["U+", start, "-", end])
+
+_STATIC :: String -> Parser Token
+_STATIC s = do
+        str <- string s
+        return $ Static str

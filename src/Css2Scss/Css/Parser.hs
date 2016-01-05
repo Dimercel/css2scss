@@ -37,12 +37,9 @@ unary_operator = do
 declaration :: Parser [L.Token]
 declaration = do
          do
-            p <- property
-            sep <- L._STATIC ":"
-            s <- many L._S
-            e <- expr
+            res <- sequence [property, count 1 (L._STATIC ":"), (many L._S), expr]
             pr <- option [] prio
-            return $ concat [p, [sep], s, e, pr]
+            return $ (concat res) ++ pr
         <|> return []
 
 prio :: Parser [L.Token]
@@ -52,9 +49,8 @@ expr :: Parser [L.Token]
 expr = do
         t <- term
         o <- many $ do
-            o' <- operator
-            t' <- term
-            return $ o' ++ t'
+            res <- sequence [operator, term]
+            return $ concat res
         return $ t ++ (concat o)
 
 term :: Parser [L.Token]
@@ -86,6 +82,5 @@ function = do
 
 hexcolor :: Parser [L.Token]
 hexcolor = do
-        h <- L._HASH
-        s <- many L._S
-        return $ h:s
+        res <- sequence [count 1 L._HASH, (many L._S)]
+        return $ concat res

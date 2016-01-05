@@ -100,9 +100,9 @@ escape :: Parser String
 escape = do
         try unicode
         <|> do
-                initial <- string "\\"
-                symbol <- count 1 (oneOf $ "-~" ++ ['\o240'..'\o4177777'])
-                return $ concat [initial, symbol]
+                res <- sequence [string "\\",
+                                 count 1 (oneOf $ "-~" ++ ['\o240'..'\o4177777'])]
+                return $ concat res
         <?> "escape"
 
 nmstart :: Parser String
@@ -169,10 +169,9 @@ num :: Parser String
 num = do
         many1 (oneOf ['0'..'9'])
         <|> do
-            int <- many (oneOf ['0'..'9'])
-            string "."
-            fraction <- many1 (oneOf ['0'..'9'])
-            return $ concat [int, ".", fraction]
+            res <- sequence [many (oneOf ['0'..'9']), string ".",
+                             many1 (oneOf ['0'..'9'])]
+            return $ concat res
         <?> "num"
 
 _string :: Parser String

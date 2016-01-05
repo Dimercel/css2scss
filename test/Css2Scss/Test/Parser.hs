@@ -60,7 +60,8 @@ run = hspec $ do
             all (isRight) parseResult
 
         it "Wrong test for declaration" $ do
-            let parseResult = map (\x -> parse P.prio "test" x) ["margin@ 0 auto;", "", "margin : 0 auto;"]
+            let parseResult = map (\x -> parse P.prio "test" x) ["margin@ 0 auto;", "",
+                                                                 "margin : 0 auto;"]
             all (isLeft) parseResult
 
         it "Test for unary_operator" $ do
@@ -82,3 +83,59 @@ run = hspec $ do
         it "Wrong test for property" $ do
             let parseResult = map (\x -> parse P.property "test" x) ["123", "_prop", ""]
             all (isLeft) parseResult
+
+        it "Test for pseudo" $ do
+            let parseResult = map (\x -> parse P.pseudo "test" x) [":nth-child(2n)",
+                    ":after", ":not([controls])"]
+            all (isRight) parseResult
+
+        it "Wrong test for pseudo" $ do
+            let parseResult = map (\x -> parse P.pseudo "test" x) ["after", ":#after", ""]
+            all (isLeft) parseResult
+
+        it "Test for attrib" $ do
+            let parseResult = map (\x -> parse P.attrib "test" x) ["[type=button]"]
+            all (isRight) parseResult
+
+        it "Wrong test for attrib" $ do
+            let parseResult = map (\x -> parse P.attrib "test" x) ["[type^=button]",
+                                                                   "[type='button']", ""]
+            all (isLeft) parseResult
+
+        it "Test for element_name" $ do
+            let parseResult = map (\x -> parse P.element_name "test" x) ["body", "*", "html"]
+            all (isRight) parseResult
+
+        it "Wrong test for element_name" $ do
+            let parseResult = map (\x -> parse P.element_name "test" x) ["+test", ""]
+            all (isLeft) parseResult
+
+        it "Test for _class" $ do
+            let parseResult = map (\x -> parse P._class "test" x) [".class-name", ".class"]
+            all (isRight) parseResult
+
+        it "Wrong test for _class" $ do
+            let parseResult = map (\x -> parse P._class "test" x) ["class", ".#class", ""]
+            all (isLeft) parseResult
+
+        it "Test for simple_selector" $ do
+            let parseResult = map (\x -> parse P.simple_selector "test" x) [".class[type=button]",
+                                                                            "[href=url]"]
+            all (isRight) parseResult
+
+        it "Wrong test for simple_selector" $ do
+            let parseResult = map (\x -> parse P.simple_selector "test" x) [".#class"]
+            all (isLeft) parseResult
+
+        it "Test for combinator" $ do
+            let parseResult = map (\x -> parse P.combinator "test" x) ["+ ", "+", "> ", ">", ""]
+            all (isRight) parseResult
+
+        it "Test for selector" $ do
+            let parseResult = map (\x -> parse P.selector "test" x) ["button > input", "a > p"]
+            all (isRight) parseResult
+
+        it "Test for ruleset" $ do
+            let parseResult = map (\x -> parse P.ruleset "test" x) ["textarea {margin: 0; font: inherit; color: inherit;}",
+                 "input[type=checkbox], select {padding: .35em .625em .75em; margin: 0 2px; border: 1px solid #c0c0c0;}"]
+            all (isRight) parseResult

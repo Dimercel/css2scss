@@ -1,8 +1,17 @@
 module Css2Scss.Css.Parser
     ( stylesheet
-    , property
+    , font_face
     , operator
+    , combinator
     , unary_operator
+    , property
+    , ruleset
+    , selector
+    , simple_selector
+    , _class
+    , element_name
+    , attrib
+    , pseudo
     , declaration
     , prio
     , expr
@@ -19,8 +28,23 @@ import Css2Scss.Css.Lexer as L
 stylesheet :: String -> String
 stylesheet _ = "It is work!"
 
-property :: Parser [L.Token]
-property = ((:) <$> L._IDENT <*> many L._S)
+font_face :: Parser [L.Token]
+font_face = do
+        res <- sequence [
+            count 1 L._FONT_FACE_SYM,
+            many L._S,
+            count 1 (L._STATIC "{"),
+            many L._S,
+            declaration,
+            concat <$> (many $ do
+                res <- sequence [
+                    count 1 (L._STATIC ";"),
+                    many L._S,
+                    declaration]
+                return $ concat res),
+            count 1 (L._STATIC "}"),
+            many L._S]
+        return $ concat res
 
 operator :: Parser [L.Token]
 operator = do
@@ -28,11 +52,98 @@ operator = do
         <|> (:) <$> L._STATIC "," <*> many L._S
         <|> return []
 
+combinator :: Parser [L.Token]
+combinator = do
+        (:) <$> L._STATIC "+" <*> many L._S
+        <|> (:) <$> L._STATIC ">" <*> many L._S
+        <|> return []
 
 unary_operator :: Parser [L.Token]
 unary_operator = do
         s <- count 1 (oneOf "+-")
         return $ [L.Static s]
+
+property :: Parser [L.Token]
+property = ((:) <$> L._IDENT <*> many L._S)
+
+ruleset :: Parser [L.Token]
+ruleset = do
+        res <- sequence [
+            selector,
+            concat <$> (many $ do
+                res <- sequence [
+                    count 1 (L._STATIC ","),
+                    many L._S,
+                    selector]
+                return $ concat res),
+            count 1 (L._STATIC "{"),
+            many L._S,
+            declaration,
+            concat <$> (many $ do
+                res <- sequence [
+                    count 1 (L._STATIC ";"),
+                    many L._S,
+                    declaration]
+                return $ concat res),
+            count 1 (L._STATIC "}"),
+            many L._S]
+        return $ concat res
+
+selector :: Parser [L.Token]
+selector = do
+        res <- sequence [
+            simple_selector,
+            (option [] $ do
+                combinator
+                simple_selector)]
+        return $ concat res
+
+simple_selector :: Parser [L.Token]
+simple_selector = do
+        res <- sequence [
+            option [] element_name,
+            (option [] $ do
+                count 1 L._HASH
+                <|> _class
+                <|> attrib
+                <|> pseudo),
+            many L._S]
+        return $ concat res
+
+_class :: Parser [L.Token]
+_class = ((:) <$> L._STATIC "." <*> count 1 L._IDENT)
+
+element_name :: Parser [L.Token]
+element_name = count 1 L._IDENT <|> count 1 (L._STATIC "*")
+
+attrib :: Parser [L.Token]
+attrib = do
+        name <- sequence [count 1 (L._STATIC "["), many L._S,
+                          count 1 (L._IDENT), many L._S]
+        x <- option [] $ do
+           s1 <- do
+               L._STATIC "="
+               <|> L._INCLUDES
+               <|> L._DASHMATCH
+           sp1 <- many L._S
+           s2 <- do
+              L._IDENT
+              <|> L._STRING
+           sp2 <- many L._S
+           return $ concat [[s1], sp1, [s2], sp2]
+        end <- count 1 (L._STATIC "]")
+        return $ concat [concat name, x, end]
+
+pseudo :: Parser [L.Token]
+pseudo = do
+        start <- L._STATIC ":"
+        i <- do count 1 L._IDENT
+                <|> do
+                       res <- sequence [count 1 L._FUNCTION, many L._S,
+                                        count 1 L._IDENT, many L._S,
+                                        count 1 (L._STATIC ")")]
+                       return $ concat res
+        return $ start : i
 
 declaration :: Parser [L.Token]
 declaration = do

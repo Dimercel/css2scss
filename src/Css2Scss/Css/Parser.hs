@@ -80,11 +80,9 @@ term = do
 
 function :: Parser [L.Token]
 function = do
-        f <- (:) <$> L._FUNCTION <*> many L._S
-        e <- expr
-        char ')'
-        s2 <- many L._S
-        return $ f ++ e ++ [L.Static ")"] ++ s2
+        res <- sequence [count 1 L._FUNCTION, (many L._S), expr,
+                         count 1 (L._STATIC ")"), (many L._S)]
+        return $ concat res
 
 hexcolor :: Parser [L.Token]
 hexcolor = do

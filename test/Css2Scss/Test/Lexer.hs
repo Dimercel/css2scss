@@ -53,7 +53,7 @@ run = hspec $ do
             all (isLeft) parseResult
 
         it "Test for nmchar" $ do
-            let parseResult = map (\x -> parse L.nmchar "test" x) ["-", "1", "\o241", "\\-"]
+            let parseResult = map (\x -> parse L.nmchar "test" x) ["-", "1", "\o241", "\\-", "Z"]
             all (isRight) parseResult
 
         it "Test for wrong nmchar" $ do
@@ -69,15 +69,15 @@ run = hspec $ do
             all (isLeft) parseResult
 
         it "Test for string2" $ do
-            let parseResult = map (\x -> parse L.string2 "test" x) ["\'\t\'", "\'\t\\\r\'", "\'\o241\o242\"\'"]
+            let parseResult = map (\x -> parse L.string2 "test" x) ["\'string\'","\'\t\'", "\'\t\\\r\'", "\'\o241\o242\"\'"]
             all (isRight) parseResult
 
         it "Test for wrong string2" $ do
-            let parseResult = map (\x -> parse L.string2 "test" x) ["\'abc\'", "\'\ta\'"]
+            let parseResult = map (\x -> parse L.string2 "test" x) ["\"str\'"]
             all (isLeft) parseResult
 
         it "Test for ident" $ do
-            let parseResult = map (\x -> parse L.ident "test" x) ["-a", "-\o241\o242ab", "ident" ]
+            let parseResult = map (\x -> parse L.ident "test" x) ["-a", "-\o241\o242ab", "identTest" ]
             all (isRight) parseResult
 
         it "Test for wrong ident" $ do
@@ -85,7 +85,7 @@ run = hspec $ do
             all (isLeft) parseResult
 
         it "Test for name" $ do
-            let parseResult = map (\x -> parse L.name "test" x) ["-a0", "-", "\o241" ]
+            let parseResult = map (\x -> parse L.name "test" x) ["-a0", "-", "\o241", "TestName"]
             all (isRight) parseResult
 
         it "Test for wrong name" $ do

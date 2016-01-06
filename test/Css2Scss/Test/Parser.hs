@@ -99,7 +99,7 @@ run = hspec $ do
 
         it "Wrong test for attrib" $ do
             let parseResult = map (\x -> parse P.attrib "test" x) ["[type^=button]",
-                                                                   "[type='button']", ""]
+                                                                   "[type$=button]", ""]
             all (isLeft) parseResult
 
         it "Test for element_name" $ do
@@ -136,6 +136,10 @@ run = hspec $ do
             all (isRight) parseResult
 
         it "Test for ruleset" $ do
-            let parseResult = map (\x -> parse P.ruleset "test" x) ["textarea {margin: 0; font: inherit; color: inherit;}",
+            let parseResult = map (\x -> parse P.ruleset "test" x) ["textarea {margin: 0; font-family: 'Times New Roman'; color: inherit;}",
                  "input[type=checkbox], select {padding: .35em .625em .75em; margin: 0 2px; border: 1px solid #c0c0c0;}"]
+            all (isRight) parseResult
+
+        it "Test for font_face" $ do
+            let parseResult = map (\x -> parse P.font_face "test" x) ["@font-face { font-family: 'Glyphicons Halflings';}"]
             all (isRight) parseResult

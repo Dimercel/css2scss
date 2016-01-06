@@ -107,14 +107,14 @@ escape = do
 
 nmstart :: Parser String
 nmstart = do
-        count 1 (oneOf ['a'..'z'])
+        count 1 (oneOf $ ['a'..'z'] ++ ['A'..'Z'])
         <|> nonascii
         <|> escape
         <?> "nmstart"
 
 nmchar :: Parser String
 nmchar = do
-        count 1 (oneOf $ "-" ++ ['0'..'9'] ++ ['a'..'z'])
+        count 1 (oneOf $ "-" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'])
         <|> nonascii
         <|> escape
         <?> "nmchar"
@@ -147,6 +147,7 @@ string2 = do
             <|> string "\""
             <|> nonascii
             <|> escape
+            <|> nmchar
         string "\'"
         return $ concat ["\'", concat content, "\'"]
         <?> "string2"

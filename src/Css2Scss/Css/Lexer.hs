@@ -168,11 +168,11 @@ name = do
 
 num :: Parser String
 num = do
-        many1 (oneOf ['0'..'9'])
-        <|> do
+        try $ do
             res <- sequence [many (oneOf ['0'..'9']), string ".",
                              many1 (oneOf ['0'..'9'])]
             return $ concat res
+        <|> many1 (oneOf ['0'..'9'])
         <?> "num"
 
 _string :: Parser String
@@ -197,8 +197,8 @@ w = do
 
 nl :: Parser String
 nl = do
-        count 1 (oneOf "\n\r\f")
-        <|> string "\r\n"
+        try (string "\r\n")
+        <|> count 1 (oneOf "\n\r\f")
         <?> "nl"
 
 range :: Parser String

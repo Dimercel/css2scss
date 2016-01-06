@@ -8,6 +8,11 @@ import Text.ParserCombinators.Parsec
 
 import Css2Scss.Css.Lexer as L
 
+rightTest :: (Parser String) -> [String] -> Bool
+rightTest f l = all (==True) (map (\x -> Right x == parse f "test" x) l)
+
+wrongTest :: (Parser String) -> [String] -> Bool
+wrongTest f l = all (==True) (map (\x -> isLeft $ parse f "test" x) l)
 
 run :: IO ()
 run = hspec $ do
@@ -21,109 +26,82 @@ run = hspec $ do
             all (isLeft) parseResult
 
         it "Test for non ascii" $ do
-            let parseResult = map (\x -> parse L.nonascii "test" [x]) "\o240\o10000\o4177777"
-            all (isRight) parseResult
+            rightTest (L.nonascii) ["\o240","\o10000","\o4177777"]
 
         it "Test for wrong non ascii" $ do
-            let parseResult = map (\x -> parse L.nonascii "test" [x]) "\o0\o239"
-            all (isLeft) parseResult
+            wrongTest (L.nonascii) ["\o0","\o239"]
 
         it "Test for unicode" $ do
-            let parseResult = map (\x -> parse L.unicode "test" x) ["\\4cecCd", "\\ccc "]
-            all (isRight) parseResult
+            rightTest (L.unicode) ["\\4cecCd", "\\ccc "]
 
         it "Test for wrong unicode" $ do
-            let parseResult = map (\x -> parse L.unicode "test" x) ["\\zz", "ccc "]
-            all (isLeft) parseResult
+            wrongTest (L.unicode) ["\\zz", "ccc "]
 
         it "Test for escape" $ do
-            let parseResult = map (\x -> parse L.escape "test" x) ["\\ccc\t", "\\-", "\\\o241"]
-            all (isRight) parseResult
+            rightTest (L.escape) ["\\ccc\t", "\\-", "\\\o241"]
 
         it "Test for wrong escape" $ do
-            let parseResult = map (\x -> parse L.escape "test" x) ["ccc", "\\+"]
-            all (isLeft) parseResult
+            wrongTest (L.escape) ["ccc", "\\+"]
 
         it "Test for nmstart" $ do
-            let parseResult = map (\x -> parse L.nmstart "test" x) ["a", "\o241", "\\~"]
-            all (isRight) parseResult
+            rightTest (L.nmstart) ["a", "\o241", "\\~"]
 
         it "Test for wrong nmstart" $ do
-            let parseResult = map (\x -> parse L.nmstart "test" x) ["-", "\o239", "\\+"]
-            all (isLeft) parseResult
+            wrongTest (L.nmstart) ["-", "\o239", "\\+"]
 
         it "Test for nmchar" $ do
-            let parseResult = map (\x -> parse L.nmchar "test" x) ["-", "1", "\o241", "\\-", "Z"]
-            all (isRight) parseResult
+            rightTest (L.nmchar) ["-", "1", "\o241", "\\-", "Z"]
 
         it "Test for wrong nmchar" $ do
-            let parseResult = map (\x -> parse L.nmchar "test" x) ["+", "\o239", "\\%"]
-            all (isLeft) parseResult
+            wrongTest (L.nmchar) ["+", "\o239", "\\%"]
 
         it "Test for string1" $ do
-            let parseResult = map (\x -> parse L.string1 "test" x) ["\"\t\"", "\"\t\\\r\"", "\"\o241\o242\'\""]
-            all (isRight) parseResult
+            rightTest (L.string1) ["\"\t\"", "\"\t\\\r\"", "\"\o241\o242\'\""]
 
         it "Test for wrong string1" $ do
-            let parseResult = map (\x -> parse L.string1 "test" x) ["\"abc\"", "\"\ta\""]
-            all (isLeft) parseResult
+            wrongTest (L.string1) ["\"abc\"", "\"\ta\""]
 
         it "Test for string2" $ do
-            let parseResult = map (\x -> parse L.string2 "test" x) ["\'string\'","\'\t\'", "\'\t\\\r\'", "\'\o241\o242\"\'"]
-            all (isRight) parseResult
+            rightTest (L.string2) ["\'string\'","\'\t\'", "\'\t\\\r\'", "\'\o241\o242\"\'"]
 
         it "Test for wrong string2" $ do
-            let parseResult = map (\x -> parse L.string2 "test" x) ["\"str\'"]
-            all (isLeft) parseResult
+            wrongTest (L.string2) ["\"str\'"]
 
         it "Test for ident" $ do
-            let parseResult = map (\x -> parse L.ident "test" x) ["-a", "-\o241\o242ab", "identTest" ]
-            all (isRight) parseResult
+            rightTest (L.ident) ["-a", "-\o241\o242ab", "identTest" ]
 
         it "Test for wrong ident" $ do
-            let parseResult = map (\x -> parse L.ident "test" x) ["_a", "-_"]
-            all (isLeft) parseResult
+            wrongTest (L.ident) ["_a", "-_"]
 
         it "Test for name" $ do
-            let parseResult = map (\x -> parse L.name "test" x) ["-a0", "-", "\o241", "TestName"]
-            all (isRight) parseResult
+            rightTest (L.name) ["-a0", "-", "\o241", "TestName"]
 
         it "Test for wrong name" $ do
-            let parseResult = map (\x -> parse L.name "test" x) ["_a", ""]
-            all (isLeft) parseResult
+            wrongTest (L.name) ["_a", ""]
 
         it "Test for num" $ do
-            let parseResult = map (\x -> parse L.num "test" x) [".42", "3.14", "666" ]
-            all (isRight) parseResult
+            rightTest (L.num) [".42", "3.14", "666"]
 
         it "Test for wrong num" $ do
-            let parseResult = map (\x -> parse L.num "test" x) ["-4", ".a", ".a"]
-            all (isLeft) parseResult
+            wrongTest (L.num) ["-4", ".a", ".a"]
 
         it "Test for string" $ do
-            let parseResult = map (\x -> parse L._string "test" x) ["\"\t\'\o240\"", "\'!\"\o240\'"]
-            all (isRight) parseResult
+            rightTest (L._string) ["\"\t\'\o240\"", "\'!\"\o240\'"]
 
         it "Test for wrong string" $ do
-            let parseResult = map (\x -> parse L._string "test" x) ["\'!!!\"", "\"!!!\'"]
-            all (isLeft) parseResult
+            wrongTest (L._string) ["\'!!!\"", "\"!!!\'"]
 
         it "Test for url" $ do
-            let parseResult = map (\x -> parse L.url "test" x) ["!\o240\o241\\22\r", "url"]
-            all (isRight) parseResult
+            rightTest (L.url) ["!\o240\o241\\22\r"]
 
         it "Test for wrong url" $ do
-            let parseResult = map (\x -> parse L.url "test" x) ["\\test"]
-            all (isLeft) parseResult
+            wrongTest (L.url) ["\\test"]
 
         it "Test for w" $ do
-            let parseResult = map (\x -> parse L.w "test" x) [" \t", "\f"]
-            all (isRight) parseResult
+            rightTest (L.w) [" \t", "\f"]
 
         it "Test for nl" $ do
-            let parseResult = map (\x -> parse L.nl "test" x) ["\n", "\r", "\f", "\r\n" ]
-            all (isRight) parseResult
+            rightTest (L.nl) ["\n", "\r", "\f", "\r\n" ]
 
         it "Test for wrong nl" $ do
-            let parseResult = map (\x -> parse L.nl "test" x) ["a", "\o200", "\t"]
-            all (isLeft) parseResult
+            wrongTest (L.nl) ["a", "\o200", "\t"]

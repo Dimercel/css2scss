@@ -143,3 +143,36 @@ run = hspec $ do
         it "Test for font_face" $ do
             let parseResult = map (\x -> parse P.font_face "test" x) ["@font-face { font-family: 'Glyphicons Halflings';}"]
             all (isRight) parseResult
+
+        it "Test for pseudo_page" $ do
+            let parseResult = map (\x -> parse P.pseudo_page "test" x) [":first", ":left", ":right"]
+            all (isRight) parseResult
+
+        it "Wrong test for pseudo_page" $ do
+            let parseResult = map (\x -> parse P.pseudo_page "test" x) ["first", ""]
+            all (isLeft) parseResult
+
+        it "Test for page" $ do
+            let parseResult = map (\x -> parse P.page "test" x) ["@page :left { margin: 1cm 3cm 1cm 1.5cm; }"]
+            all (isRight) parseResult
+
+        it "Test for medium" $ do
+            let parseResult = map (\x -> parse P.medium "test" x) ["print ", "print", "screen"]
+            all (isRight) parseResult
+
+        it "Wrong test for medium" $ do
+            let parseResult = map (\x -> parse P.medium "test" x) ["#print", ""]
+            all (isLeft) parseResult
+
+        it "Test for media" $ do
+            let parseResult = map (\x -> parse P.media "test" x) ["@media print { .lead { font-size: 21px; } }",
+                                                          "@media print, screen { .lead { font-size: 21px; } }"]
+            all (isRight) parseResult
+
+        it "Test for namespace_prefix" $ do
+            let parseResult = map (\x -> parse P.namespace_prefix "test" x) ["svg ", "Q", "lq"]
+            all (isRight) parseResult
+
+        it "Wrong test for namespace_prefix" $ do
+            let parseResult = map (\x -> parse P.namespace_prefix "test" x) ["#svg", ""]
+            all (isLeft) parseResult

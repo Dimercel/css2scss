@@ -101,7 +101,7 @@ run = hspec $ do
             rightTest (L.w) [" \t", "\f"]
 
         it "Test for nl" $ do
-            rightTest (L.nl) ["\n", "\r", "\f", "\r\n" ]
+            rightTest (L.nl) ["\n", "\r", "\f", "\r\n"]
 
         it "Test for wrong nl" $ do
             wrongTest (L.nl) ["a", "\o200", "\t"]

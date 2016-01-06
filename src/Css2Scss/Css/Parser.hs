@@ -1,5 +1,10 @@
 module Css2Scss.Css.Parser
     ( stylesheet
+    , namespace_prefix
+    , media
+    , medium
+    , page
+    , pseudo_page
     , font_face
     , operator
     , combinator
@@ -27,6 +32,55 @@ import Css2Scss.Css.Lexer as L
 
 stylesheet :: String -> String
 stylesheet _ = "It is work!"
+
+namespace_prefix :: Parser [L.Token]
+namespace_prefix = count 1 (L._IDENT)
+
+media :: Parser [L.Token]
+media = do
+        res <- sequence [
+            count 1 L._MEDIA_SYM,
+            many L._S,
+            option [] medium,
+            concat <$> (many $ do
+                res <- sequence [
+                    count 1 (L._STATIC ","),
+                    many L._S,
+                    medium]
+                return $ concat res),
+            count 1 (L._STATIC "{"),
+            many L._S,
+            concat <$> many ruleset,
+            count 1 (L._STATIC "}"),
+            many L._S]
+        return $ concat res
+
+medium :: Parser [L.Token]
+medium = (:) <$> L._IDENT <*> many L._S
+
+page :: Parser [L.Token]
+page = do
+        res <- sequence [
+            count 1 L._PAGE_SYM,
+            many L._S,
+            option [] (count 1 L._IDENT),
+            option [] pseudo_page,
+            many L._S,
+            count 1 (L._STATIC "{"),
+            many L._S,
+            declaration,
+            concat <$> (many $ do
+                res <- sequence [
+                    count 1 (L._STATIC ";"),
+                    many L._S,
+                    declaration]
+                return $ concat res),
+            count 1 (L._STATIC "}"),
+            many L._S]
+        return $ concat res
+
+pseudo_page :: Parser [L.Token]
+pseudo_page = (:) <$> L._STATIC ":" <*> count 1 L._IDENT
 
 font_face :: Parser [L.Token]
 font_face = do

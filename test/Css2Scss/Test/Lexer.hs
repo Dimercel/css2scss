@@ -56,16 +56,16 @@ run = hspec $ do
             wrongTest (L.nmchar) ["+", "\o239", "\\%"]
 
         it "Test for string1" $ do
-            rightTest (L.string1) ["\"\t\"", "\"\t\\\r\"", "\"\o241\o242\'\""]
+            rightTest (L.string1) ["\"\t\"", "\"\t\\\r\"", "\"test string\""]
 
         it "Test for wrong string1" $ do
-            wrongTest (L.string1) ["\"abc\"", "\"\ta\""]
+            wrongTest (L.string1) ["\'test\'", "\"test\'"]
 
         it "Test for string2" $ do
-            rightTest (L.string2) ["\'string\'","\'\t\'", "\'\t\\\r\'", "\'\o241\o242\"\'"]
+            rightTest (L.string2) ["\'string\'","\'\t\'", "\'\t\\\r\'", "\'test string\'"]
 
         it "Test for wrong string2" $ do
-            wrongTest (L.string2) ["\"str\'"]
+            wrongTest (L.string2) ["\"str\'", "\'str\""]
 
         it "Test for ident" $ do
             rightTest (L.ident) ["-a", "-\o241\o242ab", "identTest" ]

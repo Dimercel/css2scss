@@ -176,3 +176,21 @@ run = hspec $ do
         it "Wrong test for namespace_prefix" $ do
             let parseResult = map (\x -> parse P.namespace_prefix "test" x) ["#svg", ""]
             all (isLeft) parseResult
+
+        it "Test for namespace" $ do
+            let parseResult = map (\x -> parse P.namespace "test" x) ["@namespace svg url(http://www.w3.org/2000/svg);",
+                                                                      "@namespace url(http://www.w3.org/1999/xhtml);"]
+            all (isRight) parseResult
+
+        it "Wrong test for namespace" $ do
+            let parseResult = map (\x -> parse P.namespace "test" x) ["namespace svg", "@namespace svg;"]
+            all (isLeft) parseResult
+
+        it "Test for _import" $ do
+            let parseResult = map (\x -> parse P._import "test" x) ["@import \"/style/main.css\" screen;",
+                                                                      "@import \"/style/palm.css\" handheld, print;"]
+            all (isRight) parseResult
+
+        it "Wrong test for _import" $ do
+            let parseResult = map (\x -> parse P._import "test" x) ["import svg", "@import \"/style/main.css\" screen"]
+            all (isLeft) parseResult

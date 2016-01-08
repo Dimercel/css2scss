@@ -1,5 +1,7 @@
 module Css2Scss.Css.Parser
     ( stylesheet
+    , _import
+    , namespace
     , namespace_prefix
     , media
     , medium
@@ -30,8 +32,82 @@ import Text.ParserCombinators.Parsec
 import Css2Scss.Css.Lexer as L
 
 
-stylesheet :: String -> String
-stylesheet _ = "It is work!"
+stylesheet :: Parser [L.Token]
+stylesheet = do
+        res <- sequence [
+            (option [] $ do
+                res <- sequence [
+                    count 1 (L._CHARSET_SYM),
+                    many L._S,
+                    count 1 (L._STRING),
+                    many L._S,
+                    count 1 (L._STATIC ";")]
+                return $ concat res),
+            (many $ do
+                    L._S
+                    <|> L._CDO
+                    <|> L._CDC),
+            (concat <$> (many $ do
+                i <- _import
+                s <- many $ do
+                        L._S
+                        <|> L._CDO
+                        <|> L._CDC
+                return $ i ++ s)),
+            (concat <$> (many $ do
+                i <- namespace
+                s <- many $ do
+                        L._S
+                        <|> L._CDO
+                        <|> L._CDC
+                return $ i ++ s)),
+            (concat <$> (many $ do
+                res <- sequence [
+                    (ruleset
+                    <|> media
+                    <|> page
+                    <|> font_face),
+                    (many $ do
+                        L._S
+                        <|> L._CDO
+                        <|> L._CDC)]
+                return $ concat res))]
+        return $ concat res
+
+_import :: Parser [L.Token]
+_import = do
+        res <- sequence[
+            count 1 L._IMPORT_SYM,
+            many L._S,
+            (count 1 L._STRING
+            <|> count 1 L._URI),
+            many L._S,
+            (option [] $ do
+                m <- medium
+                res <- many $ sequence[
+                    count 1 (L._STATIC ","),
+                    many L._S,
+                    medium]
+                return $ concat [m, concat $ concat res]),
+            count 1 (L._STATIC ";"),
+            many L._S]
+        return $ concat res
+
+namespace :: Parser [L.Token]
+namespace = do
+        res <- sequence [
+            count 1 L._NAMESPACE_SYM,
+            many L._S,
+            (option [] $ do
+                namespace_prefix
+                many1 L._S),
+            (count 1 $ do
+                L._URI
+                <|> L._STRING),
+            many L._S,
+            count 1 (L._STATIC ";"),
+            many L._S]
+        return $ concat res
 
 namespace_prefix :: Parser [L.Token]
 namespace_prefix = count 1 (L._IDENT)

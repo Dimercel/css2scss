@@ -121,35 +121,20 @@ nmchar = do
 
 string1 :: Parser String
 string1 = do
-        string "\""
-        content <- many $ do
-            count 1 (oneOf "\t !#$%&(-~")
-            <|> do
-                    string "\\"
-                    nl_cont <- nl
-                    return $ concat ["\\", nl_cont]
-            <|> string "\'"
-            <|> nonascii
-            <|> escape
-        string "\""
-        return $ concat ["\"", concat content, "\""]
+        res <- sequence [
+            string "\"",
+            (many $ noneOf "\""),
+            string "\""]
+        return $ concat res
         <?> "string1"
 
 string2 :: Parser String
 string2 = do
-        string "\'"
-        content <- many $ do
-            count 1 (oneOf "\t !#$%&(-~")
-            <|> do
-                    string "\\"
-                    nl_cont <- nl
-                    return $ concat ["\\", nl_cont]
-            <|> string "\""
-            <|> nonascii
-            <|> escape
-            <|> nmchar
-        string "\'"
-        return $ concat ["\'", concat content, "\'"]
+        res <- sequence [
+            string "\'",
+            (many $ noneOf "\'"),
+            string "\'"]
+        return $ concat res
         <?> "string2"
 
 ident :: Parser String
@@ -349,14 +334,13 @@ _NUMBER = do
 
 _URI :: Parser Token
 _URI = do
-        string "url(\""
-        sp1 <- w
-        s <- do
-                _string
-                <|> url
-        sp2 <- w
-        string "\")"
-        return $ Uri (concat ["url(\"", sp1, s, sp2, "\")"])
+        res <- sequence [
+            string "url(",
+            w,
+            many $ noneOf " \t\r\n\f)",
+            w,
+            string ")"]
+        return $ Uri (concat res)
 
 _FUNCTION :: Parser Token
 _FUNCTION = do

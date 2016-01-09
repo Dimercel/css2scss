@@ -88,21 +88,18 @@ nonascii = do
         <?> "nonascii"
 
 unicode :: Parser String
-unicode = do
-        initial <- string "\\"
-        hex <- try (count 6 h)
-            <|> many1 h
-        end <- option "" (count 1 (oneOf " \t\r\n\f"))
-        return $ concat [initial, hex, end]
+unicode = concat <$> sequence [
+        string "\\",
+        (try (count 6 h)
+            <|> many1 h),
+        (option "" (count 1 (oneOf " \t\r\n\f")))]
         <?> "unicode"
 
 escape :: Parser String
 escape = do
         try unicode
-        <|> do
-                res <- sequence [string "\\",
-                                 count 1 (oneOf $ "-~" ++ ['\o240'..'\o4177777'])]
-                return $ concat res
+        <|> concat <$> sequence [string "\\",
+                count 1 (oneOf $ "-~" ++ ['\o240'..'\o4177777'])]
         <?> "escape"
 
 nmstart :: Parser String
@@ -120,21 +117,17 @@ nmchar = do
         <?> "nmchar"
 
 string1 :: Parser String
-string1 = do
-        res <- sequence [
+string1 = concat <$> sequence [
             string "\"",
             (many $ noneOf "\""),
             string "\""]
-        return $ concat res
         <?> "string1"
 
 string2 :: Parser String
-string2 = do
-        res <- sequence [
+string2 = concat <$> sequence [
             string "\'",
             (many $ noneOf "\'"),
             string "\'"]
-        return $ concat res
         <?> "string2"
 
 ident :: Parser String
@@ -146,17 +139,15 @@ ident = do
         <?> "ident"
 
 name :: Parser String
-name = do
-        name_sym <- many1 nmchar
-        return $ concat name_sym
-        <?> "name"
+name = concat <$> many1 nmchar
+       <?> "name"
 
 num :: Parser String
 num = do
-        try $ do
-            res <- sequence [many (oneOf ['0'..'9']), string ".",
-                             many1 (oneOf ['0'..'9'])]
-            return $ concat res
+        try $ concat <$> sequence [
+             many (oneOf ['0'..'9']),
+             string ".",
+             many1 (oneOf ['0'..'9'])]
         <|> many1 (oneOf ['0'..'9'])
         <?> "num"
 
@@ -350,15 +341,16 @@ _FUNCTION = do
 
 _UNICODERANGE :: Parser Token
 _UNICODERANGE = do
-        string "U+"
-        start <- do
-            try (count 6 h)
-            <|> many1 h
-        char '-'
-        end <- do
-            try (count 6 h)
-            <|> many1 h
-        return $ UnicodeRange (concat ["U+", start, "-", end])
+        res <- sequence [
+            string "U+",
+            (do
+                try (count 6 h)
+                <|> many1 h),
+            count 1 (char '-'),
+            (do
+                try (count 6 h)
+                <|> many1 h)]
+        return $ UnicodeRange (concat res)
 
 _STATIC :: String -> Parser Token
 _STATIC s = do

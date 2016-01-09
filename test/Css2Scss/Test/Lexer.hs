@@ -41,19 +41,19 @@ run = hspec $ do
             rightTest (L.escape) ["\\ccc\t", "\\-", "\\\o241"]
 
         it "Test for wrong escape" $ do
-            wrongTest (L.escape) ["ccc", "\\+"]
+            wrongTest (L.escape) ["ccc", "\\\r"]
 
         it "Test for nmstart" $ do
             rightTest (L.nmstart) ["a", "\o241", "\\~"]
 
         it "Test for wrong nmstart" $ do
-            wrongTest (L.nmstart) ["-", "\o239", "\\+"]
+            wrongTest (L.nmstart) ["-", "\o239"]
 
         it "Test for nmchar" $ do
             rightTest (L.nmchar) ["-", "1", "\o241", "\\-", "Z"]
 
         it "Test for wrong nmchar" $ do
-            wrongTest (L.nmchar) ["+", "\o239", "\\%"]
+            wrongTest (L.nmchar) ["+", "\o239"]
 
         it "Test for string1" $ do
             rightTest (L.string1) ["\"\t\"", "\"\t\\\r\"", "\"test string\""]
@@ -71,13 +71,13 @@ run = hspec $ do
             rightTest (L.ident) ["-a", "-\o241\o242ab", "identTest" ]
 
         it "Test for wrong ident" $ do
-            wrongTest (L.ident) ["_a", "-_"]
+            wrongTest (L.ident) ["#a", "-#"]
 
         it "Test for name" $ do
             rightTest (L.name) ["-a0", "-", "\o241", "TestName"]
 
         it "Test for wrong name" $ do
-            wrongTest (L.name) ["_a", ""]
+            wrongTest (L.name) [" test", "#test"]
 
         it "Test for num" $ do
             rightTest (L.num) [".42", "3.14", "666"]
@@ -94,8 +94,8 @@ run = hspec $ do
         it "Test for url" $ do
             rightTest (L.url) ["!\o240\o241\\22\r"]
 
-        it "Test for wrong url" $ do
-            wrongTest (L.url) ["\\test"]
+        {-it "Test for wrong url" $ do-}
+            {-wrongTest (L.url) ["\\url"]-}
 
         it "Test for w" $ do
             rightTest (L.w) [" \t", "\f"]

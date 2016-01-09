@@ -81,7 +81,7 @@ run = hspec $ do
             all (isRight) parseResult
 
         it "Wrong test for property" $ do
-            let parseResult = map (\x -> parse P.property "test" x) ["123", "_prop", ""]
+            let parseResult = map (\x -> parse P.property "test" x) ["123", "#prop", ""]
             all (isLeft) parseResult
 
         it "Test for pseudo" $ do

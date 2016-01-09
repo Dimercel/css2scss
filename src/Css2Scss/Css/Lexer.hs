@@ -15,6 +15,7 @@ module Css2Scss.Css.Lexer
     , url
     , nl
     , w
+    , sym_d
     , _S
     , _CDO
     , _CDC
@@ -92,26 +93,31 @@ unicode = concat <$> sequence [
         string "\\",
         (try (count 6 h)
             <|> many1 h),
-        (option "" (count 1 (oneOf " \t\r\n\f")))]
+        (option "" $ do
+            try (string "\r\n")
+            <|> count 1 (oneOf " \t\r\n\f"))]
         <?> "unicode"
 
 escape :: Parser String
 escape = do
         try unicode
         <|> concat <$> sequence [string "\\",
-                count 1 (oneOf $ "-~" ++ ['\o240'..'\o4177777'])]
+                count 1 (noneOf $ "\r\n\f" ++
+                                  ['0'..'9'] ++
+                                  ['a'..'f'] ++
+                                  ['A'..'F'])]
         <?> "escape"
 
 nmstart :: Parser String
 nmstart = do
-        count 1 (oneOf $ ['a'..'z'] ++ ['A'..'Z'])
+        count 1 (oneOf $ "_" ++ ['a'..'z'] ++ ['A'..'Z'])
         <|> nonascii
         <|> escape
         <?> "nmstart"
 
 nmchar :: Parser String
 nmchar = do
-        count 1 (oneOf $ "-" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'])
+        count 1 (oneOf $ "_-" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'])
         <|> nonascii
         <|> escape
         <?> "nmchar"
@@ -181,6 +187,19 @@ range :: Parser String
 range = do
         return ""
         <?> "range"
+
+sym_d :: Parser String
+sym_d = concat <$> count 1 (string "d")
+        <|> do
+            zero <- try (count 1 (string "\\0"))
+                <|> many (string "\\0")
+            n <- string "44"
+                <|> string "64"
+            end <- option "" $ do
+                    try (string "\r\n")
+                    <|> count 1 (oneOf " \t\r\n\f")
+            return $ (concat zero) ++ n ++ end
+        <?> "sym_d"
 
 _S :: Parser Token
 _S = do

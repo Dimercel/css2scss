@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Css2Scss.Css.Parser
     ( stylesheet
     , _import
@@ -25,11 +27,23 @@ module Css2Scss.Css.Parser
     , term
     , function
     , hexcolor
+
+    , preprocessor
     ) where
 
 
 import Text.ParserCombinators.Parsec
+import Text.Regex.PCRE.Heavy (gsub, re)
 import Css2Scss.Css.Lexer as L
+
+
+preprocessor :: String -> String
+preprocessor text = do
+        ignore_comments text
+
+ignore_comments :: String -> String
+ignore_comments css =
+        gsub [re|\/\*[^*]*\*+([^/*][^*]*\*+)*\/|] "" css
 
 
 stylesheet :: Parser [L.Token]

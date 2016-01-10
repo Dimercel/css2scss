@@ -23,6 +23,7 @@ library
                        Css2Scss.Scss.Render
   build-depends:       base >= 4.7 && < 5
                      , parsec >= 3.1.9
+                     , pcre-heavy
   default-language:    Haskell2010
 
 executable css2scss-exe
@@ -32,6 +33,7 @@ executable css2scss-exe
   build-depends:       base
                      , css2scss
                      , parsec >= 3.1.9
+                     , pcre-heavy
   default-language:    Haskell2010
 
 test-suite css2scss-test
@@ -43,6 +45,8 @@ test-suite css2scss-test
                      , parsec >= 3.1.9
                      , hspec
                      , QuickCheck
+  other-modules:       Css2Scss.Test.Lexer
+                     , Css2Scss.Test.Parser
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

@@ -111,3 +111,33 @@ run = hspec $ do
 
         it "Test for wrong sym_d" $ do
             wrongTest (L.sym_d) ["a", "\\0000044", "\\077"]
+
+        it "Test for sym_e" $ do
+            rightTest (L.sym_e) ["e", "\\0045", "\\065", "\\065\r\n"]
+
+        it "Test for wrong sym_e" $ do
+            wrongTest (L.sym_e) ["a", "\\0000045", "\\077"]
+
+        it "Test for sym_n" $ do
+            rightTest (L.sym_n) ["n", "\\004e", "\\06e", "\\06e\r\n", "\\n"]
+
+        it "Test for wrong sym_n" $ do
+            wrongTest (L.sym_n) ["a", "\\000004e", "\\077"]
+
+        it "Test for sym_o" $ do
+            rightTest (L.sym_o) ["o", "\\004f", "\\06f", "\\06f\r\n", "\\o"]
+
+        it "Test for wrong sym_o" $ do
+            wrongTest (L.sym_o) ["a", "\\000004f", "\\077"]
+
+        it "Test for sym_t" $ do
+            rightTest (L.sym_t) ["t", "\\0054", "\\074", "\\074\r\n", "\\t"]
+
+        it "Test for wrong sym_t" $ do
+            wrongTest (L.sym_t) ["a", "\\0000054", "\\077"]
+
+        it "Test for sym_v" $ do
+            rightTest (L.sym_v) ["v", "\\0058", "\\078", "\\078\r\n", "\\v"]
+
+        it "Test for wrong sym_v" $ do
+            wrongTest (L.sym_v) ["a", "\\0000058", "\\077"]

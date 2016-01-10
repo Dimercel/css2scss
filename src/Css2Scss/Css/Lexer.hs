@@ -16,6 +16,11 @@ module Css2Scss.Css.Lexer
     , nl
     , w
     , sym_d
+    , sym_e
+    , sym_n
+    , sym_o
+    , sym_t
+    , sym_v
     , _S
     , _CDO
     , _CDC
@@ -201,6 +206,80 @@ sym_d = concat <$> count 1 (string "d")
                     <|> count 1 (oneOf " \t\r\n\f")
             return $ start ++ (concat zero) ++ n ++ end
         <?> "sym_d"
+
+sym_e :: Parser String
+sym_e = concat <$> count 1 (string "e")
+        <|> do
+            start <- string "\\"
+            zero <- try (count 4 (string "0"))
+                <|> many (string "0")
+            n <- string "45"
+                <|> string "65"
+            end <- option "" $ do
+                    try (string "\r\n")
+                    <|> count 1 (oneOf " \t\r\n\f")
+            return $ start ++ (concat zero) ++ n ++ end
+        <?> "sym_e"
+
+sym_n :: Parser String
+sym_n = concat <$> count 1 (string "n")
+        <|> try (do
+            start <- string "\\"
+            zero <- try (count 4 (string "0"))
+                <|> many (string "0")
+            n <- string "4e"
+                <|> string "6e"
+            end <- option "" $ do
+                    try (string "\r\n")
+                    <|> count 1 (oneOf " \t\r\n\f")
+            return $ start ++ (concat zero) ++ n ++ end)
+        <|> string "\\n"
+        <?> "sym_n"
+
+sym_o :: Parser String
+sym_o = concat <$> count 1 (string "o")
+        <|> try (do
+            start <- string "\\"
+            zero <- try (count 4 (string "0"))
+                <|> many (string "0")
+            n <- string "4f"
+                <|> string "6f"
+            end <- option "" $ do
+                    try (string "\r\n")
+                    <|> count 1 (oneOf " \t\r\n\f")
+            return $ start ++ (concat zero) ++ n ++ end)
+        <|> string "\\o"
+        <?> "sym_o"
+
+sym_t :: Parser String
+sym_t = concat <$> count 1 (string "t")
+        <|> try (do
+            start <- string "\\"
+            zero <- try (count 4 (string "0"))
+                <|> many (string "0")
+            n <- string "54"
+                <|> string "74"
+            end <- option "" $ do
+                    try (string "\r\n")
+                    <|> count 1 (oneOf " \t\r\n\f")
+            return $ start ++ (concat zero) ++ n ++ end)
+        <|> string "\\t"
+        <?> "sym_t"
+
+sym_v :: Parser String
+sym_v = concat <$> count 1 (string "v")
+        <|> try (do
+            start <- string "\\"
+            zero <- try (count 4 (string "0"))
+                <|> many (string "0")
+            n <- string "58"
+                <|> string "78"
+            end <- option "" $ do
+                    try (string "\r\n")
+                    <|> count 1 (oneOf " \t\r\n\f")
+            return $ start ++ (concat zero) ++ n ++ end)
+        <|> string "\\v"
+        <?> "sym_v"
 
 _S :: Parser Token
 _S = do

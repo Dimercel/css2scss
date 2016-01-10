@@ -58,10 +58,20 @@ data Token = S String
            | Cdo String
            | Cdc String
            | Includes String
-           | Dashmatch String
+           | DashMatch String
+           | PrefixMatch String
+           | SuffixMatch String
+           | SubStringMatch String
            | String' String
            | Ident String
            | Hash String
+           | Plus String
+           | Greater String
+           | Comma String
+           | Tilde String
+           | Not String
+           | AtKeyWord String
+           | Dimension String
            | ImportSym String
            | PageSym String
            | MediaSym String
@@ -304,7 +314,22 @@ _INCLUDES = do
 _DASHMATCH :: Parser Token
 _DASHMATCH = do
         string "|="
-        return $ Dashmatch "|="
+        return $ DashMatch "|="
+
+_PREFIXMATCH :: Parser Token
+_PREFIXMATCH = do
+        string "^="
+        return $ PrefixMatch "^="
+
+_SUFFIXMATCH :: Parser Token
+_SUFFIXMATCH = do
+        string "$="
+        return $ SuffixMatch "$="
+
+_SUBSTRINGMATCH :: Parser Token
+_SUBSTRINGMATCH = do
+        string "*="
+        return $ SubStringMatch "*="
 
 _STRING ::Parser Token
 _STRING = do
@@ -321,6 +346,52 @@ _HASH = do
         string "#"
         hashname <- name
         return $ Hash (concat ["#", hashname])
+
+_PLUS :: Parser Token
+_PLUS = do
+        x <- w
+        string "+"
+        return $ Plus (x ++ "+")
+
+_GREATER :: Parser Token
+_GREATER = do
+        x <- w
+        string ">"
+        return $ Greater (x ++ ">")
+
+_COMMA :: Parser Token
+_COMMA = do
+        x <- w
+        string ","
+        return $ Comma (x ++ ",")
+
+_TILDE :: Parser Token
+_TILDE = do
+        x <- w
+        string "~"
+        return $ Tilde (x ++ "~")
+
+_NOT :: Parser Token
+_NOT = do
+        res <- sequence [
+            string ":",
+            sym_n,
+            sym_o,
+            sym_t,
+            string "("]
+        return $ Not (concat res)
+
+_ATKEYWORD :: Parser Token
+_ATKEYWORD = do
+        string "@"
+        i <- ident
+        return $ AtKeyWord ("@" ++ i)
+
+_DIMENSION :: Parser Token
+_DIMENSION = do
+        n <- num
+        i <- ident
+        return $ Dimension (n ++ i)
 
 _IMPORT_SYM :: Parser Token
 _IMPORT_SYM = do

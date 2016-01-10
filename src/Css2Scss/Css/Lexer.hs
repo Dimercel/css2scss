@@ -191,14 +191,15 @@ range = do
 sym_d :: Parser String
 sym_d = concat <$> count 1 (string "d")
         <|> do
-            zero <- try (count 1 (string "\\0"))
-                <|> many (string "\\0")
+            start <- string "\\"
+            zero <- try (count 4 (string "0"))
+                <|> many (string "0")
             n <- string "44"
                 <|> string "64"
             end <- option "" $ do
                     try (string "\r\n")
                     <|> count 1 (oneOf " \t\r\n\f")
-            return $ (concat zero) ++ n ++ end
+            return $ start ++ (concat zero) ++ n ++ end
         <?> "sym_d"
 
 _S :: Parser Token

@@ -105,3 +105,9 @@ run = hspec $ do
 
         it "Test for wrong nl" $ do
             wrongTest (L.nl) ["a", "\o200", "\t"]
+
+        it "Test for sym_d" $ do
+            rightTest (L.sym_d) ["d", "\\0044", "\\064", "\\064\r\n"]
+
+        it "Test for wrong sym_d" $ do
+            wrongTest (L.sym_d) ["a", "\\0000044", "\\077"]

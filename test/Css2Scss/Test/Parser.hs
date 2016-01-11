@@ -86,7 +86,7 @@ run = hspec $ do
 
         it "Test for pseudo" $ do
             let parseResult = map (\x -> parse P.pseudo "test" x) [":nth-child(2n)",
-                    ":after", ":not([controls])"]
+                    ":after", ":not([controls])", "::-moz-focus-inner"]
             all (isRight) parseResult
 
         it "Wrong test for pseudo" $ do
@@ -103,7 +103,7 @@ run = hspec $ do
             all (isLeft) parseResult
 
         it "Test for element_name" $ do
-            let parseResult = map (\x -> parse P.element_name "test" x) ["body", "*", "html"]
+            let parseResult = map (\x -> parse P.element_name "test" x) ["body", "html"]
             all (isRight) parseResult
 
         it "Wrong test for element_name" $ do
@@ -201,4 +201,20 @@ run = hspec $ do
 
         it "Wrong test for expression" $ do
             let parseResult = map (\x -> parse P.expression "test" x) ["\20ac", ""]
+            all (isLeft) parseResult
+
+        it "Test for functional_pseudo" $ do
+            let parseResult = map (\x -> parse P.functional_pseudo "test" x) ["nth-of-type(odd)"]
+            all (isRight) parseResult
+
+        it "Wrong test for functional_pseudo" $ do
+            let parseResult = map (\x -> parse P.functional_pseudo "test" x) ["#test()", "test()", ""]
+            all (isLeft) parseResult
+
+        it "Test for negation" $ do
+            let parseResult = map (\x -> parse P.negation "test" x) [":not([controls])", ":not(.dropdown-toggle)", ":not(:root)"]
+            all (isRight) parseResult
+
+        it "Wrong test for negation" $ do
+            let parseResult = map (\x -> parse P.negation "test" x) ["not(.class)", ":not(.test", ""]
             all (isLeft) parseResult

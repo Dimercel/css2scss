@@ -26,9 +26,18 @@ module Css2Scss.Css.Lexer
     , _CDC
     , _INCLUDES
     , _DASHMATCH
+    , _PREFIXMATCH
+    , _SUFFIXMATCH
+    , _SUBSTRINGMATCH
     , _STRING
     , _IDENT
     , _HASH
+    , _PLUS
+    , _GREATER
+    , _COMMA
+    , _TILDE
+    , _NOT
+    , _ATKEYWORD
     , _IMPORT_SYM
     , _PAGE_SYM
     , _MEDIA_SYM
@@ -44,6 +53,7 @@ module Css2Scss.Css.Lexer
     , _FREQ
     , _DIMEN
     , _PERCENTAGE
+    , _DIMENSION
     , _NUMBER
     , _URI
     , _FUNCTION

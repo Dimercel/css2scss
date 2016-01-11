@@ -21,6 +21,7 @@ module Css2Scss.Css.Parser
     , pseudo
     , declaration
     , prio
+    , expression
     , expr
     , term
     , function
@@ -270,6 +271,18 @@ declaration = do
 
 prio :: Parser [L.Token]
 prio =  ((:) <$> L._IMPORTANT_SYM <*> many L._S)
+
+expression :: Parser [L.Token]
+expression = concat <$> (many1 $ do
+            concat <$> sequence [
+                (count 1 L._PLUS
+                <|> count 1 (L._STATIC "-")
+                <|> count 1 L._DIMENSION
+                <|> count 1 L._NUMBER
+                <|> count 1 L._IDENT
+                <|> count 1 L._STRING),
+                many L._S])
+            
 
 expr :: Parser [L.Token]
 expr = do

@@ -194,3 +194,11 @@ run = hspec $ do
         it "Wrong test for _import" $ do
             let parseResult = map (\x -> parse P._import "test" x) ["import svg", "@import \"/style/main.css\" screen"]
             all (isLeft) parseResult
+
+        it "Test for expresion" $ do
+            let parseResult = map (\x -> parse P.expression "test" x) ["1px solid red", "'Glyphicons Halflings'"]
+            all (isRight) parseResult
+
+        it "Wrong test for expression" $ do
+            let parseResult = map (\x -> parse P.expression "test" x) ["\20ac", ""]
+            all (isLeft) parseResult

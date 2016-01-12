@@ -98,7 +98,7 @@ _import = concat <$> sequence [
 type_selector :: Parser [L.Token]
 type_selector = concat <$> sequence [
         option [] namespace_prefix,
-        element_name]
+        try element_name]
 
 namespace :: Parser [L.Token]
 namespace = concat <$> sequence [

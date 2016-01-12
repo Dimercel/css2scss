@@ -218,3 +218,27 @@ run = hspec $ do
         it "Wrong test for negation" $ do
             let parseResult = map (\x -> parse P.negation "test" x) ["not(.class)", ":not(.test", ""]
             all (isLeft) parseResult
+
+        it "Test for negation_arg" $ do
+            let parseResult = map (\x -> parse P.negation_arg "test" x) [".class", "[button]", ":root"]
+            all (isRight) parseResult
+
+        it "Wrong test for negation_arg" $ do
+            let parseResult = map (\x -> parse P.negation_arg "test" x) [" test", ""]
+            all (isLeft) parseResult
+
+        it "Test for universal" $ do
+            let parseResult = map (\x -> parse P.universal "test" x) ["svg*", "**"]
+            all (isRight) parseResult
+
+        it "Wrong test for universal" $ do
+            let parseResult = map (\x -> parse P.universal "test" x) ["#test", ""]
+            all (isLeft) parseResult
+
+        it "Test for type_selector" $ do
+            let parseResult = map (\x -> parse P.type_selector "test" x) ["*p"]
+            all (isRight) parseResult
+
+        it "Wrong test for type_selector" $ do
+            let parseResult = map (\x -> parse P.type_selector "test" x) ["#test", ""]
+            all (isLeft) parseResult

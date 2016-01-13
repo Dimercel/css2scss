@@ -120,7 +120,7 @@ unicode = concat <$> sequence [
             <|> many1 h),
         (option "" $ do
             try (string "\r\n")
-            <|> count 1 (oneOf " \t\r\n\f"))]
+            <|> count 1 (oneOf "\t\r\n\f"))]
         <?> "unicode"
 
 escape :: Parser String

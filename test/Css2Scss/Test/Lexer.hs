@@ -32,7 +32,7 @@ run = hspec $ do
             wrongTest (L.nonascii) ["\o0","\o239"]
 
         it "Test for unicode" $ do
-            rightTest (L.unicode) ["\\4cecCd", "\\ccc "]
+            rightTest (L.unicode) ["\\4cecCd", "\\ccc"]
 
         it "Test for wrong unicode" $ do
             wrongTest (L.unicode) ["\\zz", "ccc "]

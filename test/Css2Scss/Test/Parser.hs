@@ -170,12 +170,8 @@ run = hspec $ do
             all (isRight) parseResult
 
         it "Test for namespace_prefix" $ do
-            let parseResult = map (\x -> parse P.namespace_prefix "test" x) ["svg ", "Q", "lq"]
+            let parseResult = map (\x -> parse P.namespace_prefix "test" x) ["svg", "Q|", "lq|"]
             all (isRight) parseResult
-
-        it "Wrong test for namespace_prefix" $ do
-            let parseResult = map (\x -> parse P.namespace_prefix "test" x) ["#svg", ""]
-            all (isLeft) parseResult
 
         it "Test for namespace" $ do
             let parseResult = map (\x -> parse P.namespace "test" x) ["@namespace svg url(http://www.w3.org/2000/svg);",

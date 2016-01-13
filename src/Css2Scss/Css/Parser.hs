@@ -104,7 +104,7 @@ namespace :: Parser [L.Token]
 namespace = concat <$> sequence [
         count 1 L._NAMESPACE_SYM,
         many L._S,
-        (option [] $ do
+        (lookAhead $ do
             namespace_prefix
             many1 L._S),
         (count 1 $ do
@@ -115,9 +115,11 @@ namespace = concat <$> sequence [
         many L._S]
 
 namespace_prefix :: Parser [L.Token]
-namespace_prefix = do
-            try $ count 1 L._IDENT
-            <|> count 1 (L._STATIC "*")
+namespace_prefix = concat <$> sequence [
+        (option [] (do
+            count 1 L._IDENT
+            <|> count 1 (L._STATIC "*"))),
+        (option [] (count 1 $ L._STATIC "|"))]
 
 media :: Parser [L.Token]
 media = concat <$> sequence [

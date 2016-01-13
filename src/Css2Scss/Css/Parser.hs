@@ -104,12 +104,17 @@ namespace :: Parser [L.Token]
 namespace = concat <$> sequence [
         count 1 L._NAMESPACE_SYM,
         many L._S,
-        (lookAhead $ do
-            namespace_prefix
-            many1 L._S),
-        (count 1 $ do
-            L._URI
-            <|> L._STRING),
+        (do
+            try $ count 1 L._URI
+            <|> do
+                    concat <$> sequence [
+                        (option [] $ do
+                            concat <$> sequence [
+                                namespace_prefix,
+                                many1 L._S]),
+                        (count 1 $ do
+                            L._URI
+                            <|> L._STRING)]),
         many L._S,
         count 1 (L._STATIC ";"),
         many L._S]

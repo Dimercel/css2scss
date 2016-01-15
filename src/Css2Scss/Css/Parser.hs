@@ -199,7 +199,7 @@ combinator = do
 unary_operator :: Parser [L.Token]
 unary_operator = do
         s <- count 1 (oneOf "+-")
-        return $ [L.Static s]
+        return $ [(L.Static, s)]
 
 property :: Parser [L.Token]
 property = ((:) <$> L._IDENT <*> many L._S)

@@ -1,5 +1,6 @@
 module Css2Scss.Css.Lexer
     ( Token (..)
+    , TokenId(..)
     , h
     , nonascii
     , unicode
@@ -64,45 +65,48 @@ module Css2Scss.Css.Lexer
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Char
 
-data Token = S String
-           | Cdo String
-           | Cdc String
-           | Includes String
-           | DashMatch String
-           | PrefixMatch String
-           | SuffixMatch String
-           | SubStringMatch String
-           | String' String
-           | Ident String
-           | Hash String
-           | Plus String
-           | Greater String
-           | Comma String
-           | Tilde String
-           | Not String
-           | AtKeyWord String
-           | Dimension String
-           | ImportSym String
-           | PageSym String
-           | MediaSym String
-           | FontFaceSym String
-           | CharsetSym String
-           | NamespaceSym String
-           | ImportantSym String
-           | Ems String
-           | Exs String
-           | Length String
-           | Angle String
-           | Time String
-           | Freq String
-           | Dimen String
-           | Percentage String
-           | Number String
-           | Uri String
-           | Function String
-           | UnicodeRange String
-           | Static String
-           deriving (Eq, Show)
+data TokenId = S
+               | Cdo
+               | Cdc
+               | Includes
+               | DashMatch
+               | PrefixMatch
+               | SuffixMatch
+               | SubMatch
+               | String'
+               | Ident
+               | Hash
+               | Plus
+               | Greater
+               | Comma
+               | Tilde
+               | Not
+               | AtKeyWord
+               | Dimension
+               | ImportSym
+               | PageSym
+               | MediaSym
+               | FontFaceSym
+               | CharsetSym
+               | NamespaceSym
+               | ImportantSym
+               | Ems
+               | Exs
+               | Length
+               | Angle
+               | Time
+               | Freq
+               | Dimen
+               | Percentage
+               | Number
+               | Uri
+               | Function
+               | UnicodeRange
+               | SubStringMatch
+               | Static
+               deriving (Eq, Show)
+
+type Token = (TokenId, String)
 
 
 h :: Parser Char
@@ -304,82 +308,82 @@ sym_v = concat <$> count 1 (string "v")
 _S :: Parser Token
 _S = do
         s <- many1 $ (oneOf " \t\r\n\f")
-        return $ S s
+        return $ (S, s)
 
 _CDO :: Parser Token
 _CDO = do
         string "<!--"
-        return $ Cdo "<!--"
+        return $ (Cdo, "<!--")
 
 _CDC :: Parser Token
 _CDC = do
         string "-->"
-        return $ Cdc "-->"
+        return $ (Cdc, "-->")
 
 _INCLUDES :: Parser Token
 _INCLUDES = do
         string "~="
-        return $ Includes "~="
+        return $ (Includes, "~=")
 
 _DASHMATCH :: Parser Token
 _DASHMATCH = do
         string "|="
-        return $ DashMatch "|="
+        return $ (DashMatch, "|=")
 
 _PREFIXMATCH :: Parser Token
 _PREFIXMATCH = do
         string "^="
-        return $ PrefixMatch "^="
+        return $ (PrefixMatch, "^=")
 
 _SUFFIXMATCH :: Parser Token
 _SUFFIXMATCH = do
         string "$="
-        return $ SuffixMatch "$="
+        return $ (SuffixMatch, "$=")
 
 _SUBSTRINGMATCH :: Parser Token
 _SUBSTRINGMATCH = do
         string "*="
-        return $ SubStringMatch "*="
+        return $ (SubStringMatch, "*=")
 
 _STRING ::Parser Token
 _STRING = do
         s <- _string
-        return $ String' s
+        return $ (String', s)
 
 _IDENT :: Parser Token
 _IDENT = do
         i <- ident
-        return $ Ident i
+        return $ (Ident, i)
 
 _HASH :: Parser Token
 _HASH = do
         string "#"
         hashname <- name
-        return $ Hash (concat ["#", hashname])
+        return $ (Hash, (concat ["#", hashname]))
 
 _PLUS :: Parser Token
 _PLUS = do
         x <- w
         string "+"
-        return $ Plus (x ++ "+")
+        return $ (Plus, (x ++ "+"))
 
 _GREATER :: Parser Token
 _GREATER = do
         x <- w
         string ">"
-        return $ Greater (x ++ ">")
+        return $ (Greater, (x ++ ">"))
 
 _COMMA :: Parser Token
 _COMMA = do
         x <- w
         string ","
-        return $ Comma (x ++ ",")
+        return $ (Comma, (x ++ ","))
 
 _TILDE :: Parser Token
 _TILDE = do
         x <- w
         string "~"
-        return $ Tilde (x ++ "~")
+        return $ (Tilde, (x ++ "~"))
 
 _NOT :: Parser Token
 _NOT = do
@@ -389,68 +393,68 @@ _NOT = do
             sym_o,
             sym_t,
             string "("]
-        return $ Not (concat res)
+        return $ (Not, (concat res))
 
 _ATKEYWORD :: Parser Token
 _ATKEYWORD = do
         string "@"
         i <- ident
-        return $ AtKeyWord ("@" ++ i)
+        return $ (AtKeyWord, ("@" ++ i))
 
 _DIMENSION :: Parser Token
 _DIMENSION = do
         n <- num
         i <- ident
-        return $ Dimension (n ++ i)
+        return $ (Dimension, (n ++ i))
 
 _IMPORT_SYM :: Parser Token
 _IMPORT_SYM = do
         string "@import"
-        return $ ImportSym "@import"
+        return $ (ImportSym, "@import")
 
 _PAGE_SYM :: Parser Token
 _PAGE_SYM = do
         string "@page"
-        return $ PageSym "@page"
+        return $ (PageSym, "@page")
 
 _MEDIA_SYM :: Parser Token
 _MEDIA_SYM = do
         string "@media"
-        return $ MediaSym "@media"
+        return $ (MediaSym, "@media")
 
 _FONT_FACE_SYM :: Parser Token
 _FONT_FACE_SYM = do
         string "@font-face"
-        return $ FontFaceSym "@font-face"
+        return $ (FontFaceSym, "@font-face")
 
 _CHARSET_SYM :: Parser Token
 _CHARSET_SYM = do
         string "@charset"
-        return $ CharsetSym "@charset"
+        return $ (CharsetSym, "@charset")
 
 _NAMESPACE_SYM :: Parser Token
 _NAMESPACE_SYM = do
         string "@namespace"
-        return $ NamespaceSym "@namespace"
+        return $ (NamespaceSym, "@namespace")
 
 _IMPORTANT_SYM :: Parser Token
 _IMPORTANT_SYM = do
         char '!'
         space <- w
         string "important"
-        return $ ImportantSym (concat ["!", space, "important"])
+        return $ (ImportantSym, (concat ["!", space, "important"]))
 
 _EMS :: Parser Token
 _EMS = do
         n <- num
         string "em"
-        return $ Ems (concat [n, "em"])
+        return $ (Ems, (concat [n, "em"]))
 
 _EXS :: Parser Token
 _EXS = do
         n <- num
         string "ex"
-        return $ Exs (concat [n, "em"])
+        return $ (Exs, (concat [n, "em"]))
 
 _LENGTH :: Parser Token
 _LENGTH = do
@@ -461,7 +465,7 @@ _LENGTH = do
             <|> string "in"
             <|> string "pt"
             <|> string "pc"
-        return $ Length (concat [n,u])
+        return $ (Length, (concat [n,u]))
 
 _ANGLE :: Parser Token
 _ANGLE = do
@@ -469,14 +473,14 @@ _ANGLE = do
         u <- string "deg"
             <|> string "rad"
             <|> string "grad"
-        return $ Angle (concat [n,u])
+        return $ (Angle, (concat [n,u]))
 
 _TIME :: Parser Token
 _TIME = do
         n <- num
         u <- string "ms"
             <|> string "s"
-        return $ Time (concat [n,u])
+        return $ (Time, (concat [n,u]))
 
 
 _FREQ :: Parser Token
@@ -484,24 +488,24 @@ _FREQ = do
         n <- num
         u <- string "Hz"
             <|> string "kHz"
-        return $ Freq (concat [n,u])
+        return $ (Freq, (concat [n,u]))
 
 _DIMEN :: Parser Token
 _DIMEN = do
         n <- num
         i <- ident
-        return $ Dimen (concat [n, i])
+        return $ (Dimen, (concat [n, i]))
 
 _PERCENTAGE :: Parser Token
 _PERCENTAGE = do
         n <- num
         char '%'
-        return $ Percentage (concat [n, "%"])
+        return $ (Percentage, (concat [n, "%"]))
 
 _NUMBER :: Parser Token
 _NUMBER = do
         n <- num
-        return $ Number n
+        return $ (Number, n)
 
 _URI :: Parser Token
 _URI = do
@@ -511,13 +515,13 @@ _URI = do
             many $ noneOf " \t\r\n\f)",
             w,
             string ")"]
-        return $ Uri (concat res)
+        return $ (Uri, (concat res))
 
 _FUNCTION :: Parser Token
 _FUNCTION = do
         i <- ident
         char '('
-        return $ Function (concat [i, "("])
+        return $ (Function, (concat [i, "("]))
 
 _UNICODERANGE :: Parser Token
 _UNICODERANGE = do
@@ -530,9 +534,9 @@ _UNICODERANGE = do
             (do
                 try (count 6 h)
                 <|> many1 h)]
-        return $ UnicodeRange (concat res)
+        return $ (UnicodeRange, (concat res))
 
 _STATIC :: String -> Parser Token
 _STATIC s = do
         str <- string s
-        return $ Static str
+        return $ (Static, str)

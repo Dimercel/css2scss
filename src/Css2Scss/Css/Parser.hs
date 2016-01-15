@@ -237,8 +237,8 @@ simple_selector =
             (option [] $ do
                 count 1 L._HASH
                 <|> _class
-                <|> attrib
-                <|> pseudo),
+                <|> pseudo
+                <|> attrib),
             many L._S]
 
 universal :: Parser [L.Token]
@@ -275,8 +275,8 @@ pseudo = concat <$> sequence [
             (count 1 (L._STATIC ":")),
             option [] (count 1 (L._STATIC ":")),
             (do
-                try (count 1 L._IDENT)
-                <|> functional_pseudo)]
+                try functional_pseudo
+                <|> count 1 L._IDENT)]
 
 
 declaration :: Parser [L.Token]
@@ -344,7 +344,6 @@ term = concat <$> sequence [
             try hexcolor
             <|> try ((:) <$> L._UNICODERANGE <*> many L._S)
             <|> try ((:) <$> L._URI <*> many L._S)
-            <|> try ((:) <$> L._IDENT <*> many L._S)
             <|> do
                     try function
                     <|> try ((:) <$> L._PERCENTAGE <*> many L._S)
@@ -355,6 +354,7 @@ term = concat <$> sequence [
                     <|> try ((:) <$> L._TIME <*> many L._S)
                     <|> try ((:) <$> L._FREQ <*> many L._S)
                     <|> try ((:) <$> L._NUMBER <*> many L._S)
+            <|> try ((:) <$> L._IDENT <*> many L._S)
             <|> (:) <$> L._STRING <*> many L._S)]
 
 function :: Parser [L.Token]

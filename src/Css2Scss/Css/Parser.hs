@@ -1,6 +1,8 @@
 module Css2Scss.Css.Parser
     ( stylesheet
     , _import
+    , selectors_group
+    , simple_selector_sequence
     , type_selector
     , namespace
     , namespace_prefix
@@ -15,7 +17,6 @@ module Css2Scss.Css.Parser
     , property
     , ruleset
     , selector
-    , simple_selector
     , universal
     , _class
     , element_name
@@ -95,10 +96,38 @@ _import = concat <$> sequence [
         count 1 (L._STATIC ";"),
         many L._S]
 
+selectors_group :: Parser [L.Token]
+selectors_group = do
+        s <- selector
+        ms <- many $ do
+                concat <$> sequence [
+                    count 1 L._COMMA,
+                    many L._S,
+                    selector]
+        return $ s ++ (concat ms)
+
+simple_selector_sequence :: Parser [L.Token]
+simple_selector_sequence = concat <$> sequence [
+        (option [] (try universal
+            <|> type_selector)),
+        (concat <$> (many $ do
+            count 1 L._HASH
+            <|> _class
+            <|> try negation
+            <|> pseudo
+            <|> attrib))]
+
+
 type_selector :: Parser [L.Token]
-type_selector = concat <$> sequence [
-        option [] namespace_prefix,
-        try element_name]
+type_selector = do
+        try $ do
+            e <- element_name
+            notFollowedBy $ char '|'
+            return $ e
+        <|> do
+                n <- option [] namespace_prefix
+                e <- element_name
+                return $ n ++ e
 
 namespace :: Parser [L.Token]
 namespace = concat <$> sequence [
@@ -121,10 +150,9 @@ namespace = concat <$> sequence [
 
 namespace_prefix :: Parser [L.Token]
 namespace_prefix = concat <$> sequence [
-        (option [] (do
-            count 1 L._IDENT
-            <|> count 1 (L._STATIC "*"))),
-        (option [] (count 1 $ L._STATIC "|"))]
+        (option [] (count 1 (L._STATIC "*")
+            <|> count 1 L._IDENT)),
+        option [] (count 1 (L._STATIC "|"))]
 
 media :: Parser [L.Token]
 media = concat <$> sequence [
@@ -192,9 +220,19 @@ operator = do
 
 combinator :: Parser [L.Token]
 combinator = do
-        (:) <$> L._STATIC "+" <*> many L._S
-        <|> (:) <$> L._STATIC ">" <*> many L._S
-        <|> return []
+        do
+            c <- try L._GREATER
+            s <- many L._S
+            return $ c : s
+        <|> do
+            c <- try L._PLUS
+            s <- many L._S
+            return $ c : s
+        <|> do
+            c <- try L._TILDE
+            s <- many L._S
+            return $ c : s
+        <|> many1 L._S
 
 unary_operator :: Parser [L.Token]
 unary_operator = do
@@ -206,12 +244,7 @@ property = ((:) <$> L._IDENT <*> many L._S)
 
 ruleset :: Parser [L.Token]
 ruleset = concat <$> sequence [
-            selector,
-            concat <$> (many $ do
-                concat <$> sequence [
-                    count 1 (L._STATIC ","),
-                    many L._S,
-                    selector]),
+            selectors_group,
             count 1 (L._STATIC "{"),
             many L._S,
             declaration,
@@ -225,26 +258,22 @@ ruleset = concat <$> sequence [
 
 selector :: Parser [L.Token]
 selector = concat <$> sequence [
-        simple_selector,
-        (option [] $ do
-             combinator
-             simple_selector)]
-
-simple_selector :: Parser [L.Token]
-simple_selector =
-        concat <$> sequence [
-            option [] element_name,
-            (option [] $ do
-                count 1 L._HASH
-                <|> _class
-                <|> pseudo
-                <|> attrib),
-            many L._S]
+        simple_selector_sequence,
+        (concat <$> (many $ do
+            c <- combinator
+            s <- simple_selector_sequence
+            return $ c ++ s))]
 
 universal :: Parser [L.Token]
-universal = concat <$> sequence [
-        option [] namespace_prefix,
-        count 1 (L._STATIC "*")]
+universal = do
+        try $ do
+            s <- count 1 (L._STATIC "*")
+            notFollowedBy $ char '|'
+            return s
+        <|> do
+                n <- option [] namespace_prefix
+                s <- count 1 (L._STATIC "*")
+                return $ n ++ s
 
 _class :: Parser [L.Token]
 _class = ((:) <$> L._STATIC "." <*> count 1 L._IDENT)
@@ -253,30 +282,30 @@ element_name :: Parser [L.Token]
 element_name = count 1 L._IDENT
 
 attrib :: Parser [L.Token]
-attrib = do
-        name <- sequence [count 1 (L._STATIC "["), many L._S,
-                          count 1 (L._IDENT),      many L._S]
-        con <- option [] $ do
-            concat <$> sequence [
-                (count 1 (do
-                    L._STATIC "="
-                    <|> L._INCLUDES
-                    <|> L._DASHMATCH)),
-                many L._S,
-                (count 1 (do
-                   L._IDENT
-                   <|> L._STRING)),
-                many L._S]
-        end <- count 1 (L._STATIC "]")
-        return $ concat [concat name, con, end]
+attrib = concat <$> sequence [
+        count 1 (L._STATIC "["),
+        many L._S,
+        option [] namespace_prefix,
+        many L._S,
+        (option [] $ concat <$> sequence [
+            (count 1 L._PREFIXMATCH
+            <|> count 1 L._SUFFIXMATCH
+            <|> count 1 L._SUBSTRINGMATCH
+            <|> count 1 L._INCLUDES
+            <|> count 1 L._DASHMATCH
+            <|> count 1 (L._STATIC "=")),
+            many L._S,
+            (count 1 L._IDENT
+            <|> count 1 L._STRING),
+            many L._S]),
+        count 1 (L._STATIC "]")]
 
 pseudo :: Parser [L.Token]
 pseudo = concat <$> sequence [
             (count 1 (L._STATIC ":")),
             option [] (count 1 (L._STATIC ":")),
-            (do
-                try functional_pseudo
-                <|> count 1 L._IDENT)]
+            (try functional_pseudo
+             <|> count 1 L._IDENT)]
 
 
 declaration :: Parser [L.Token]

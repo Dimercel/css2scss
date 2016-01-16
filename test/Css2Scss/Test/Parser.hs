@@ -83,10 +83,15 @@ run = hspec $ do
             wrongTest P.pseudo ["after", ":#after", ""]
 
         it "Test for attrib" $ do
-            rightTest P.attrib ["[type=button]"]
+            rightTest P.attrib ["[ type = button ]", "[type^=button]",
+                                "[type~=button]", "[type|=button]",
+                                "[type$=button]", "[type*=button]",
+                                "[ type = 'button' ]", "[type^='button']",
+                                "[type~='button']", "[type|=\"button\"]",
+                                "[type$=\"button\"]", "[type*=\"button\"]"]
 
         it "Wrong test for attrib" $ do
-            wrongTest P.attrib ["[type^=button]", "[type$=button]", ""]
+            wrongTest P.attrib ["[#type=button]", "[type=#button#]", ""]
 
         it "Test for element_name" $ do
             rightTest P.element_name ["body", "html"]
@@ -100,17 +105,13 @@ run = hspec $ do
         it "Wrong test for _class" $ do
             wrongTest P._class ["class", ".#class", ""]
 
-        it "Test for simple_selector" $ do
-            rightTest P.simple_selector [".class[type=button]", "[href=url]"]
-
-        it "Wrong test for simple_selector" $ do
-            wrongTest P.simple_selector [".#class"]
-
         it "Test for combinator" $ do
-            rightTest P.combinator ["+ ", "+", "> ", ">", ""]
+            rightTest P.combinator ["+ ", "+", "> ", ">", "~", "~ ", "", "  "]
 
         it "Test for selector" $ do
-            rightTest P.selector ["button > input", "a > p"]
+            rightTest P.selector ["button > input", "a > p",
+                                  ".dropup > input.btn > .caret",
+                                  "textarea"]
 
         it "Test for ruleset" $ do
             rightTest P.ruleset ["textarea {margin: 0; font-family: 'Times New Roman'; color: inherit;}",
@@ -139,10 +140,10 @@ run = hspec $ do
                                "@media print, screen { .lead { font-size: 21px; } }"]
 
         it "Test for namespace_prefix" $ do
-            rightTest P.namespace_prefix ["svg", "Q|", "lq|"]
+            rightTest P.namespace_prefix ["svg|", "*|", "|", "svg"]
 
         it "Test for namespace" $ do
-            rightTest P.namespace ["@namespace svg url(http://www.w3.org/2000/svg);",
+            rightTest P.namespace ["@namespace svg| url(http://www.w3.org/2000/svg);",
                                    "@namespace url(http://www.w3.org/1999/xhtml);"]
 
         it "Wrong test for namespace" $ do
@@ -180,13 +181,23 @@ run = hspec $ do
             wrongTest P.negation_arg [" test", ""]
 
         it "Test for universal" $ do
-            rightTest P.universal ["svg*", "**"]
+            rightTest P.universal ["svg|*", "*", "*|*"]
 
         it "Wrong test for universal" $ do
-            wrongTest P.universal ["#test", ""]
+            wrongTest P.universal ["#test", "svg", ""]
 
         it "Test for type_selector" $ do
-            rightTest P.type_selector ["*p"]
+            rightTest P.type_selector ["*p", "svg|circle", "*|circle", "body"]
 
         it "Wrong test for type_selector" $ do
-            wrongTest P.type_selector ["#test", ""]
+            wrongTest P.type_selector ["#test", "svg|", ""]
+
+        it "Test for simple_selector_sequence" $ do
+            rightTest P.simple_selector_sequence ["a:hover", "*|a.class", "audio:not([controls])",
+                                                  "abbr[title]", "abbr"]
+
+        it "Test for selectors_group" $ do
+            rightTest P.selectors_group ["a.text-primary:hover, a.text-primary:focus",
+               "audio:not([controls])", "[hidden],\ntemplate",
+               "input[type=\"checkbox\"], input[type=radio]",
+               "input[type=\"number\"]::-webkit-inner-spin-button"]

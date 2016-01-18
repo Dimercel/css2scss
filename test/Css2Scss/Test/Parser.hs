@@ -137,7 +137,12 @@ run = hspec $ do
 
         it "Test for media" $ do
             rightTest P.media ["@media print { .lead { font-size: 21px; } }",
-                               "@media print, screen { .lead { font-size: 21px; } }"]
+                               "@media print, screen { .lead { font-size: 21px; } }",
+                               "@media (min-width: 768px){}",
+                               "@media screen and (max-width: 767px){}",
+                               "@media (max-device-width: 480px) and (orientation: landscape)",
+                               "@media all and (transform-3d), (-webkit-transform-3d)"
+                               ]
 
         it "Test for namespace_prefix" $ do
             rightTest P.namespace_prefix ["svg|", "*|", "|", "svg"]

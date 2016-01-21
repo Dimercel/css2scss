@@ -3,6 +3,9 @@
 module Css2Scss.Css.Parser
     ( stylesheet
     , _import
+    , selectors_group
+    , simple_selector_sequence
+    , type_selector
     , namespace
     , namespace_prefix
     , media
@@ -16,13 +19,17 @@ module Css2Scss.Css.Parser
     , property
     , ruleset
     , selector
-    , simple_selector
+    , universal
     , _class
     , element_name
     , attrib
     , pseudo
     , declaration
     , prio
+    , functional_pseudo
+    , expression
+    , negation
+    , negation_arg
     , expr
     , term
     , function
@@ -77,9 +84,9 @@ stylesheet = concat <$> sequence [
         (concat <$> (many $ do
             res <- sequence [
                 (ruleset
-                <|> media
-                <|> page
-                <|> font_face),
+                <|> try media
+                <|> try page
+                <|> try font_face),
                 (many $ do
                     L._S
                     <|> L._CDO
@@ -103,42 +110,87 @@ _import = concat <$> sequence [
         count 1 (L._STATIC ";"),
         many L._S]
 
+selectors_group :: Parser [L.Token]
+selectors_group = do
+        s <- selector
+        ms <- many $ do
+                concat <$> sequence [
+                    count 1 L._COMMA,
+                    many L._S,
+                    selector]
+        return $ s ++ (concat ms)
+
+simple_selector_sequence :: Parser [L.Token]
+simple_selector_sequence = concat <$> sequence [
+        (option [] (try universal
+            <|> type_selector)),
+        (concat <$> (many $ do
+            count 1 L._HASH
+            <|> _class
+            <|> try negation
+            <|> pseudo
+            <|> attrib))]
+
+
+type_selector :: Parser [L.Token]
+type_selector = do
+        try $ do
+            e <- element_name
+            notFollowedBy $ char '|'
+            return $ e
+        <|> do
+                n <- option [] namespace_prefix
+                e <- element_name
+                return $ n ++ e
+
 namespace :: Parser [L.Token]
 namespace = concat <$> sequence [
         count 1 L._NAMESPACE_SYM,
         many L._S,
-        (option [] $ do
-            namespace_prefix
-            many1 L._S),
-        (count 1 $ do
-            L._URI
-            <|> L._STRING),
+        (do
+            try $ count 1 L._URI
+            <|> do
+                    concat <$> sequence [
+                        (option [] $ do
+                            concat <$> sequence [
+                                namespace_prefix,
+                                many1 L._S]),
+                        (count 1 $ do
+                            L._URI
+                            <|> L._STRING)]),
         many L._S,
         count 1 (L._STATIC ";"),
         many L._S]
 
 namespace_prefix :: Parser [L.Token]
-namespace_prefix = count 1 (L._IDENT)
+namespace_prefix = concat <$> sequence [
+        (option [] (count 1 (L._STATIC "*")
+            <|> count 1 L._IDENT)),
+        option [] (count 1 (L._STATIC "|"))]
 
 media :: Parser [L.Token]
 media = concat <$> sequence [
-        count 1 L._MEDIA_SYM,
-        many L._S,
-        option [] medium,
-        concat <$> (many $ do
-            res <- sequence [
-                count 1 (L._STATIC ","),
-                many L._S,
-                medium]
-            return $ concat res),
-        count 1 (L._STATIC "{"),
-        many L._S,
-        concat <$> many ruleset,
-        count 1 (L._STATIC "}"),
-        many L._S]
+            count 1 L._MEDIA_SYM,
+            many L._S,
+            medium,
+            concat <$> (many $ do
+                res <- sequence [
+                    (count 1 (L._STATIC ",")
+                    <|> count 1 (L._STATIC "and")),
+                    many L._S,
+                    medium]
+                return $ concat res),
+            count 1 (L._STATIC "{"),
+            many L._S,
+            concat <$> many ruleset,
+            count 1 (L._STATIC "}"),
+            many L._S]
 
 medium :: Parser [L.Token]
-medium = (:) <$> L._IDENT <*> many L._S
+medium = concat <$> sequence [
+        (count 1 L._MEDIA_LIMIT
+        <|> count 1 L._IDENT),
+        many L._S]
 
 page :: Parser [L.Token]
 page = concat <$> sequence [
@@ -186,26 +238,31 @@ operator = do
 
 combinator :: Parser [L.Token]
 combinator = do
-        (:) <$> L._STATIC "+" <*> many L._S
-        <|> (:) <$> L._STATIC ">" <*> many L._S
-        <|> return []
+        do
+            c <- try L._GREATER
+            s <- many L._S
+            return $ c : s
+        <|> do
+            c <- try L._PLUS
+            s <- many L._S
+            return $ c : s
+        <|> do
+            c <- try L._TILDE
+            s <- many L._S
+            return $ c : s
+        <|> many1 L._S
 
 unary_operator :: Parser [L.Token]
 unary_operator = do
         s <- count 1 (oneOf "+-")
-        return $ [L.Static s]
+        return $ [(L.Static, s)]
 
 property :: Parser [L.Token]
 property = ((:) <$> L._IDENT <*> many L._S)
 
 ruleset :: Parser [L.Token]
 ruleset = concat <$> sequence [
-            selector,
-            concat <$> (many $ do
-                concat <$> sequence [
-                    count 1 (L._STATIC ","),
-                    many L._S,
-                    selector]),
+            selectors_group,
             count 1 (L._STATIC "{"),
             many L._S,
             declaration,
@@ -219,57 +276,55 @@ ruleset = concat <$> sequence [
 
 selector :: Parser [L.Token]
 selector = concat <$> sequence [
-        simple_selector,
-        (option [] $ do
-             combinator
-             simple_selector)]
+        simple_selector_sequence,
+        (concat <$> (many $ do
+            c <- combinator
+            s <- simple_selector_sequence
+            return $ c ++ s))]
 
-simple_selector :: Parser [L.Token]
-simple_selector =
-        concat <$> sequence [
-            option [] element_name,
-            (option [] $ do
-                count 1 L._HASH
-                <|> _class
-                <|> attrib
-                <|> pseudo),
-            many L._S]
+universal :: Parser [L.Token]
+universal = do
+        try $ do
+            s <- count 1 (L._STATIC "*")
+            notFollowedBy $ char '|'
+            return s
+        <|> do
+                n <- option [] namespace_prefix
+                s <- count 1 (L._STATIC "*")
+                return $ n ++ s
 
 _class :: Parser [L.Token]
 _class = ((:) <$> L._STATIC "." <*> count 1 L._IDENT)
 
 element_name :: Parser [L.Token]
-element_name = count 1 L._IDENT <|> count 1 (L._STATIC "*")
+element_name = count 1 L._IDENT
 
 attrib :: Parser [L.Token]
-attrib = do
-        name <- sequence [count 1 (L._STATIC "["), many L._S,
-                          count 1 (L._IDENT),      many L._S]
-        con <- option [] $ do
-            concat <$> sequence [
-                (count 1 (do
-                    L._STATIC "="
-                    <|> L._INCLUDES
-                    <|> L._DASHMATCH)),
-                many L._S,
-                (count 1 (do
-                   L._IDENT
-                   <|> L._STRING)),
-                many L._S]
-        end <- count 1 (L._STATIC "]")
-        return $ concat [concat name, con, end]
+attrib = concat <$> sequence [
+        count 1 (L._STATIC "["),
+        many L._S,
+        option [] namespace_prefix,
+        many L._S,
+        (option [] $ concat <$> sequence [
+            (count 1 L._PREFIXMATCH
+            <|> count 1 L._SUFFIXMATCH
+            <|> count 1 L._SUBSTRINGMATCH
+            <|> count 1 L._INCLUDES
+            <|> count 1 L._DASHMATCH
+            <|> count 1 (L._STATIC "=")),
+            many L._S,
+            (count 1 L._IDENT
+            <|> count 1 L._STRING),
+            many L._S]),
+        count 1 (L._STATIC "]")]
 
 pseudo :: Parser [L.Token]
 pseudo = concat <$> sequence [
-        (count 1 (L._STATIC ":")),
-        (do count 1 L._IDENT
-            <|> do
-                   concat <$> sequence [
-                       count 1 L._FUNCTION,
-                       many L._S,
-                       count 1 L._IDENT,
-                       many L._S,
-                       count 1 (L._STATIC ")")])]
+            (count 1 (L._STATIC ":")),
+            option [] (count 1 (L._STATIC ":")),
+            (try functional_pseudo
+             <|> count 1 L._IDENT)]
+
 
 declaration :: Parser [L.Token]
 declaration = do
@@ -285,6 +340,43 @@ declaration = do
 prio :: Parser [L.Token]
 prio =  ((:) <$> L._IMPORTANT_SYM <*> many L._S)
 
+
+
+functional_pseudo :: Parser [L.Token]
+functional_pseudo = concat <$> sequence [
+        count 1 L._FUNCTION,
+        many L._S,
+        expression,
+        count 1 (L._STATIC ")")]
+
+expression :: Parser [L.Token]
+expression = concat <$> (many1 $ do
+            concat <$> sequence [
+                (count 1 L._PLUS
+                <|> count 1 (L._STATIC "-")
+                <|> count 1 L._DIMENSION
+                <|> count 1 L._NUMBER
+                <|> count 1 L._IDENT
+                <|> count 1 L._STRING),
+                many L._S])
+
+negation :: Parser [L.Token]
+negation = concat <$> sequence [
+        count 1 L._NOT,
+        many L._S,
+        negation_arg,
+        many L._S,
+        count 1 (L._STATIC ")")]
+
+negation_arg :: Parser [L.Token]
+negation_arg = do
+        try type_selector
+        <|> universal
+        <|> count 1 L._HASH
+        <|> _class
+        <|> pseudo
+        <|> attrib
+
 expr :: Parser [L.Token]
 expr = do
         t <- term
@@ -299,7 +391,6 @@ term = concat <$> sequence [
             try hexcolor
             <|> try ((:) <$> L._UNICODERANGE <*> many L._S)
             <|> try ((:) <$> L._URI <*> many L._S)
-            <|> try ((:) <$> L._IDENT <*> many L._S)
             <|> do
                     try function
                     <|> try ((:) <$> L._PERCENTAGE <*> many L._S)
@@ -310,6 +401,7 @@ term = concat <$> sequence [
                     <|> try ((:) <$> L._TIME <*> many L._S)
                     <|> try ((:) <$> L._FREQ <*> many L._S)
                     <|> try ((:) <$> L._NUMBER <*> many L._S)
+            <|> try ((:) <$> L._IDENT <*> many L._S)
             <|> (:) <$> L._STRING <*> many L._S)]
 
 function :: Parser [L.Token]

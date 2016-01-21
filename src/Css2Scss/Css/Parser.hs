@@ -70,9 +70,9 @@ stylesheet = concat <$> sequence [
         (concat <$> (many $ do
             res <- sequence [
                 (ruleset
-                <|> media
-                <|> page
-                <|> font_face),
+                <|> try media
+                <|> try page
+                <|> try font_face),
                 (many $ do
                     L._S
                     <|> L._CDO
@@ -158,10 +158,11 @@ media :: Parser [L.Token]
 media = concat <$> sequence [
             count 1 L._MEDIA_SYM,
             many L._S,
-            option [] medium,
+            medium,
             concat <$> (many $ do
                 res <- sequence [
-                    count 1 (L._STATIC ","),
+                    (count 1 (L._STATIC ",")
+                    <|> count 1 (L._STATIC "and")),
                     many L._S,
                     medium]
                 return $ concat res),
@@ -172,7 +173,10 @@ media = concat <$> sequence [
             many L._S]
 
 medium :: Parser [L.Token]
-medium = (:) <$> L._IDENT <*> many L._S
+medium = concat <$> sequence [
+        (count 1 L._MEDIA_LIMIT
+        <|> count 1 L._IDENT),
+        many L._S]
 
 page :: Parser [L.Token]
 page = concat <$> sequence [

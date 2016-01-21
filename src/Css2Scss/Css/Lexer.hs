@@ -57,6 +57,7 @@ module Css2Scss.Css.Lexer
     , _DIMENSION
     , _NUMBER
     , _URI
+    , _MEDIA_LIMIT
     , _FUNCTION
     , _UNICODERANGE
     , _STATIC
@@ -100,6 +101,7 @@ data TokenId = S
                | Percentage
                | Number
                | Uri
+               | MediaLimit
                | Function
                | UnicodeRange
                | SubStringMatch
@@ -516,6 +518,16 @@ _URI = do
             w,
             string ")"]
         return $ (Uri, (concat res))
+
+_MEDIA_LIMIT :: Parser Token
+_MEDIA_LIMIT = do
+        res <- sequence [
+            string "(",
+            w,
+            many $ noneOf "\t\r\n\f)",
+            w,
+            string ")"]
+        return $ (MediaLimit, (concat res))
 
 _FUNCTION :: Parser Token
 _FUNCTION = do

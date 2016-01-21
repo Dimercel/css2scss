@@ -139,7 +139,7 @@ run = hspec $ do
             rightTest P.media ["@media print { .lead { font-size: 21px; } }",
                                "@media print, screen { .lead { font-size: 21px; } }",
                                "@media (min-width: 768px){}",
-                               "@media screen and (max-width: 767px){}",
+                               "@media screen and (max-width: 767px){ .test {margin: 10px;}}",
                                "@media (max-device-width: 480px) and (orientation: landscape){}",
                                "@media all and (transform-3d), (-webkit-transform-3d){}"
                                ]

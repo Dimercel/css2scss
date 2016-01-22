@@ -50,7 +50,7 @@ preprocessor text = do
 
 ignore_comments :: String -> String
 ignore_comments css =
-        gsub [re|\/\*[^*]*\*+([^/*][^*]*\*+)*\/|] "" css
+        gsub [re|\/\*[^*]*\*+([^/*][^*]*\*+)*\/|] (" " :: String) css
 
 
 stylesheet :: Parser [L.Token]

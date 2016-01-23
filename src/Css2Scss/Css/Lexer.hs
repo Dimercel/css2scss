@@ -148,7 +148,7 @@ nmstart = do
 
 nmchar :: Parser String
 nmchar = do
-        count 1 (oneOf $ "_-" ++ ['0'..'9'] ++ ['a'..'z'] ++ ['A'..'Z'])
+        count 1 (oneOf $ concat [['a'..'z'], ['A'..'Z'], ['0'..'9'], "_-"])
         <|> nonascii
         <|> escape
         <?> "nmchar"

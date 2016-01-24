@@ -1,7 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Css2Scss.Css.Parser
-    ( stylesheet
+    ( AST (..)
+    , stylesheet
     , _import
     , selectors_group
     , simple_selector_sequence
@@ -43,6 +44,10 @@ import Text.ParserCombinators.Parsec
 import Text.Regex.PCRE.Heavy (gsub, re)
 import Css2Scss.Css.Lexer as L
 
+
+type ASTData = (String, [L.Token])
+
+data AST a = Empty | Node a [AST a] deriving(Show, Eq)
 
 preprocessor :: String -> String
 preprocessor text = do

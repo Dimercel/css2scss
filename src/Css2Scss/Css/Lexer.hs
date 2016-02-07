@@ -111,6 +111,19 @@ data TokenId = S
 type Token = (TokenId, String)
 
 
+getData :: [Token] -> String
+getData [] = ""
+getData x = concat $ map (\i -> snd i) x
+
+charset_lex :: [Token] -> String
+charset_lex  (x:xs)
+    | fst(x) == CharsetSym = getData $ concat [
+        [x],
+        takeWhile (\y -> snd y /= ";") xs,
+        filter (\y -> snd y == ";") xs]
+    | otherwise = ""
+
+
 h :: Parser Char
 h = hexDigit <?> "h"
 

@@ -117,16 +117,16 @@ type Token = (TokenId, String)
 get_lexem :: [Token] -> [Token] -> [Token]
 get_lexem patt tokens =
         case all (isJust) positions of
-            True -> map (fromJust) positions
+            True -> take ((last $ map (fromJust) positions) + 1) tokens
             False -> []
-        where positions = map (\p -> find (\x -> x == p) tokens) patt
+        where positions = map (\p -> findIndex (\x -> x == p) tokens) patt
 
 
 getData :: [Token] -> String
 getData x = concat $ map (\i -> snd i) x
 
 charset_lex :: [Token] -> String
-charset_lex  x = getData $ get_lexem [(CharsetSym,"@charset"), (Static,"{"), (Static,"}")] x
+charset_lex  x = getData $ get_lexem [(CharsetSym,"@charset"), (Static,";")] x
 
 
 h :: Parser Char

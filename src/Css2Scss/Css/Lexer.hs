@@ -66,6 +66,9 @@ module Css2Scss.Css.Lexer
 import Text.ParserCombinators.Parsec
 import Text.Parsec.Char
 
+import Data.List
+import Data.Maybe
+
 data TokenId = S
                | Cdo
                | Cdc
@@ -111,17 +114,19 @@ data TokenId = S
 type Token = (TokenId, String)
 
 
+get_lexem :: [Token] -> [Token] -> [Token]
+get_lexem patt tokens =
+        case all (isJust) positions of
+            True -> map (fromJust) positions
+            False -> []
+        where positions = map (\p -> find (\x -> x == p) tokens) patt
+
+
 getData :: [Token] -> String
-getData [] = ""
 getData x = concat $ map (\i -> snd i) x
 
 charset_lex :: [Token] -> String
-charset_lex  (x:xs)
-    | fst(x) == CharsetSym = getData $ concat [
-        [x],
-        takeWhile (\y -> snd y /= ";") xs,
-        filter (\y -> snd y == ";") xs]
-    | otherwise = ""
+charset_lex  x = getData $ get_lexem [(CharsetSym,"@charset"), (Static,"{"), (Static,"}")] x
 
 
 h :: Parser Char

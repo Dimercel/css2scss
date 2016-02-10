@@ -126,7 +126,34 @@ getData :: [Token] -> String
 getData x = concat $ map (\i -> snd i) x
 
 charset_lex :: [Token] -> String
-charset_lex  x = getData $ get_lexem [(CharsetSym,"@charset"), (Static,";")] x
+charset_lex x
+        | head x == (CharsetSym, "@charset") = getData $
+            get_lexem [(CharsetSym, "@charset"), (Static, ";")] x
+        | otherwise = []
+
+import_lex :: [Token] -> String
+import_lex x
+        | head x == (ImportSym, "@import") = getData $
+            get_lexem [(CharsetSym, "@import"), (Static, ";")] x
+        | otherwise = []
+
+namespace_lex :: [Token] -> String
+namespace_lex x
+        | head x == (NamespaceSym, "@namespace") = getData $
+            get_lexem [(NamespaceSym, "@namespace"), (Static, ";")] x
+        | otherwise = []
+
+page_lex :: [Token] -> String
+page_lex x
+        | head x == (PageSym, "@page") = getData $
+            get_lexem [(PageSym, "@page"), (Static, ";")] x
+        | otherwise = []
+
+font_face_lex :: [Token] -> String
+font_face_lex x
+        | head x == (FontFaceSym, "@font-face") = getData $
+            get_lexem [(FontFaceSym, "@font-face"), (Static, ";")] x
+        | otherwise = []
 
 
 h :: Parser Char

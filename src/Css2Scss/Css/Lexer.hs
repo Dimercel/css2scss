@@ -1,6 +1,11 @@
 module Css2Scss.Css.Lexer
     ( Token (..)
     , TokenId(..)
+    , charset_lex
+    , import_lex
+    , namespace_lex
+    , page_lex
+    , font_face_lex
     , h
     , nonascii
     , unicode
@@ -68,6 +73,7 @@ import Text.Parsec.Char
 
 import Data.List
 import Data.Maybe
+import Control.Monad.State as S
 
 data TokenId = S
                | Cdo
@@ -114,6 +120,31 @@ data TokenId = S
 type Token = (TokenId, String)
 
 
+_findToken :: Token -> (Token -> Token -> Bool) -> S.State [Token] [Token]
+_findToken t f = S.state $ \x -> (take (equalElem t x) x, drop (equalElem t x) x)
+    where equalElem t elems = let inx = findIndex (f t) elems
+            in case isJust inx of
+                   True -> 1 + (fromJust inx)
+                   False -> 0
+
+findTokenById :: Token -> S.State [Token] [Token]
+findTokenById t = _findToken t (\x y -> fst x == fst y)
+
+findToken :: Token -> S.State [Token] [Token]
+findToken t = _findToken t (==)
+
+getData :: [Token] -> String
+getData x = concat $ map (\i -> snd i) x
+
+charset_lex :: [Token] -> String
+charset_lex x
+        | head x == (CharsetSym, "@charset") = getData $ S.evalState (
+            do
+                a <- findTokenById (CharsetSym,"")
+                b <- findToken (Static,";")
+                return $ concat [a, b]) x
+        | otherwise = []
+
 get_lexem :: [Token] -> [Token] -> [Token]
 get_lexem patt tokens =
         case all (isJust) positions of
@@ -121,15 +152,6 @@ get_lexem patt tokens =
             False -> []
         where positions = map (\p -> findIndex (\x -> x == p) tokens) patt
 
-
-getData :: [Token] -> String
-getData x = concat $ map (\i -> snd i) x
-
-charset_lex :: [Token] -> String
-charset_lex x
-        | head x == (CharsetSym, "@charset") = getData $
-            get_lexem [(CharsetSym, "@charset"), (Static, ";")] x
-        | otherwise = []
 
 import_lex :: [Token] -> String
 import_lex x

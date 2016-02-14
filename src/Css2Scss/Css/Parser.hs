@@ -57,7 +57,7 @@ stylesheet :: Parser [L.Token]
 stylesheet = concat <$> sequence [
         (option [] $ do
             res <- sequence [
-                count 1 (L._CHARSET_SYM),
+                try $ count 1 (L._CHARSET_SYM),
                 many L._S,
                 count 1 (L._STRING),
                 many L._S,
@@ -68,14 +68,14 @@ stylesheet = concat <$> sequence [
                 <|> L._CDO
                 <|> L._CDC),
         (concat <$> (many $ do
-            i <- _import
+            i <- try _import
             s <- many $ do
                     L._S
                     <|> L._CDO
                     <|> L._CDC
             return $ i ++ s)),
         (concat <$> (many $ do
-            i <- namespace
+            i <- try namespace
             s <- many $ do
                     L._S
                     <|> L._CDO

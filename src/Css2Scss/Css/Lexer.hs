@@ -133,6 +133,20 @@ findTokenById t = _findToken t (\x y -> fst x == fst y)
 findToken :: Token -> S.State [Token] [Token]
 findToken t = _findToken t (==)
 
+
+-- | Возвращает подмассив содержащий токены находящиеся 
+-- между парными токенами. Учитывется случай вложенности токенов.
+-- Параметры: первый парный элемент, второй парный элемент,
+-- массив токенов, кол-во парных элементов(изначально (0,0))
+findPair :: Token -> Token -> [Token] -> (Int, Int) -> [Token]
+findPair _ _ [] _ = []
+findPair l r (x:xs) pos
+    | fst pos == snd pos && pos /= (0, 0) = []
+    | otherwise = x : findPair l r xs (fst pos + equal l, snd pos + equal r)
+        where equal s = case x == s of
+                            True -> 1
+                            False -> 0
+
 getData :: [Token] -> String
 getData x = concat $ map (\i -> snd i) x
 
@@ -145,38 +159,41 @@ charset_lex x
                 return $ concat [a, b]) x
         | otherwise = []
 
-get_lexem :: [Token] -> [Token] -> [Token]
-get_lexem patt tokens =
-        case all (isJust) positions of
-            True -> take ((last $ map (fromJust) positions) + 1) tokens
-            False -> []
-        where positions = map (\p -> findIndex (\x -> x == p) tokens) patt
-
-
 import_lex :: [Token] -> String
 import_lex x
-        | head x == (ImportSym, "@import") = getData $
-            get_lexem [(CharsetSym, "@import"), (Static, ";")] x
+        | head x == (CharsetSym, "@import") = getData $ S.evalState (
+            do
+                a <- findTokenById (ImportSym,"")
+                b <- findToken (Static,";")
+                return $ concat [a, b]) x
         | otherwise = []
 
 namespace_lex :: [Token] -> String
 namespace_lex x
-        | head x == (NamespaceSym, "@namespace") = getData $
-            get_lexem [(NamespaceSym, "@namespace"), (Static, ";")] x
+        | head x == (NamespaceSym, "@namespace") = getData $ S.evalState (
+            do
+                a <- findTokenById (NamespaceSym,"")
+                b <- findToken (Static,";")
+                return $ concat [a, b]) x
         | otherwise = []
 
 page_lex :: [Token] -> String
 page_lex x
-        | head x == (PageSym, "@page") = getData $
-            get_lexem [(PageSym, "@page"), (Static, ";")] x
+        | head x == (PageSym, "@page") = getData $ S.evalState (
+            do
+                a <- findTokenById (PageSym,"")
+                b <- findToken (Static,";")
+                return $ concat [a, b]) x
         | otherwise = []
 
 font_face_lex :: [Token] -> String
 font_face_lex x
-        | head x == (FontFaceSym, "@font-face") = getData $
-            get_lexem [(FontFaceSym, "@font-face"), (Static, ";")] x
+        | head x == (FontFaceSym, "@font-face") = getData $ S.evalState (
+            do
+                a <- findTokenById (FontFaceSym,"")
+                b <- findToken (Static,";")
+                return $ concat [a, b]) x
         | otherwise = []
-
 
 h :: Parser Char
 h = hexDigit <?> "h"

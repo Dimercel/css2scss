@@ -73,7 +73,7 @@ import Text.Parsec.Char
 
 import Data.List
 import Data.Maybe
-import Control.Monad.State as S
+import Control.Monad.State as ST
 
 data TokenId = S
                | Cdo
@@ -120,19 +120,26 @@ data TokenId = S
 type Token = (TokenId, String)
 
 
-_findToken :: Token -> (Token -> Token -> Bool) -> S.State [Token] [Token]
-_findToken t f = S.state $ \x -> (take (equalElem t x) x, drop (equalElem t x) x)
+_findToken :: Token -> (Token -> Token -> Bool) -> ST.State [Token] [Token]
+_findToken t f = ST.state $ \x -> (take (equalElem t x) x, drop (equalElem t x) x)
     where equalElem t elems = let inx = findIndex (f t) elems
             in case isJust inx of
                    True -> 1 + (fromJust inx)
                    False -> 0
 
-findTokenById :: Token -> S.State [Token] [Token]
+findTokenById :: Token -> ST.State [Token] [Token]
 findTokenById t = _findToken t (\x y -> fst x == fst y)
 
-findToken :: Token -> S.State [Token] [Token]
+findToken :: Token -> ST.State [Token] [Token]
 findToken t = _findToken t (==)
 
+
+findBefore :: Token -> ST.State [Token] [Token]
+findBefore t = ST.state $ \x -> (take (equalElem t x) x, drop (equalElem t x) x)
+    where equalElem t elems = let inx = findIndex (== t) elems
+            in case isJust inx of
+                   True -> (fromJust inx)
+                   False -> 0
 
 -- | Возвращает подмассив содержащий токены находящиеся 
 -- между парными токенами. Учитывется случай вложенности токенов.
@@ -147,12 +154,17 @@ findPair l r (x:xs) pos
                             True -> 1
                             False -> 0
 
+findPairM :: Token -> Token -> ST.State [Token] [Token]
+findPairM l r = ST.state $ \x -> (betweenPair x, drop (length $ betweenPair x) x)
+    where betweenPair x = findPair l r x (0, 0)
+
+
 getData :: [Token] -> String
 getData x = concat $ map (\i -> snd i) x
 
 charset_lex :: [Token] -> String
 charset_lex x
-        | head x == (CharsetSym, "@charset") = getData $ S.evalState (
+        | head x == (CharsetSym, "@charset") = getData $ ST.evalState (
             do
                 a <- findTokenById (CharsetSym,"")
                 b <- findToken (Static,";")
@@ -161,7 +173,7 @@ charset_lex x
 
 import_lex :: [Token] -> String
 import_lex x
-        | head x == (CharsetSym, "@import") = getData $ S.evalState (
+        | head x == (CharsetSym, "@import") = getData $ ST.evalState (
             do
                 a <- findTokenById (ImportSym,"")
                 b <- findToken (Static,";")
@@ -170,7 +182,7 @@ import_lex x
 
 namespace_lex :: [Token] -> String
 namespace_lex x
-        | head x == (NamespaceSym, "@namespace") = getData $ S.evalState (
+        | head x == (NamespaceSym, "@namespace") = getData $ ST.evalState (
             do
                 a <- findTokenById (NamespaceSym,"")
                 b <- findToken (Static,";")
@@ -179,7 +191,7 @@ namespace_lex x
 
 page_lex :: [Token] -> String
 page_lex x
-        | head x == (PageSym, "@page") = getData $ S.evalState (
+        | head x == (PageSym, "@page") = getData $ ST.evalState (
             do
                 a <- findTokenById (PageSym,"")
                 b <- findToken (Static,";")
@@ -188,10 +200,29 @@ page_lex x
 
 font_face_lex :: [Token] -> String
 font_face_lex x
-        | head x == (FontFaceSym, "@font-face") = getData $ S.evalState (
+        | head x == (FontFaceSym, "@font-face") = getData $ ST.evalState (
             do
                 a <- findTokenById (FontFaceSym,"")
                 b <- findToken (Static,";")
+                return $ concat [a, b]) x
+        | otherwise = []
+
+media_lex :: [Token] -> String
+media_lex x
+        | head x == (MediaSym, "@media") = getData $ ST.evalState (
+            do
+                a <- findToken (MediaSym, "@media")
+                b <- findBefore (Static, "{")
+                c <- findPairM (Static, "{") (Static, "}")
+                return $ concat [a, b, c]) x
+        | otherwise = []
+
+ruleset_lex :: [Token] -> String
+ruleset_lex x
+        | (fst $ head x) /= S = getData $ ST.evalState (
+            do
+                a <- findBefore (Static, "{")
+                b <- findPairM (Static, "{") (Static, "}")
                 return $ concat [a, b]) x
         | otherwise = []
 

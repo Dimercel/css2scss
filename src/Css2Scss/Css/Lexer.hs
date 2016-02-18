@@ -1,11 +1,7 @@
 module Css2Scss.Css.Lexer
     ( Token (..)
     , TokenId(..)
-    , charset_lex
-    , import_lex
-    , namespace_lex
-    , page_lex
-    , font_face_lex
+    , splitOnBaseLexems
     , h
     , nonascii
     , unicode
@@ -162,54 +158,54 @@ findPairM l r = ST.state $ \x -> (betweenPair x, drop (length $ betweenPair x) x
 getData :: [Token] -> String
 getData x = concat $ map (\i -> snd i) x
 
-charset_lex :: [Token] -> String
+charset_lex :: [Token] -> [Token]
 charset_lex x
-        | head x == (CharsetSym, "@charset") = getData $ ST.evalState (
+        | head x == (CharsetSym, "@charset") = ST.evalState (
             do
                 a <- findTokenById (CharsetSym,"")
                 b <- findToken (Static,";")
                 return $ concat [a, b]) x
         | otherwise = []
 
-import_lex :: [Token] -> String
+import_lex :: [Token] -> [Token]
 import_lex x
-        | head x == (CharsetSym, "@import") = getData $ ST.evalState (
+        | head x == (CharsetSym, "@import") = ST.evalState (
             do
                 a <- findTokenById (ImportSym,"")
                 b <- findToken (Static,";")
                 return $ concat [a, b]) x
         | otherwise = []
 
-namespace_lex :: [Token] -> String
+namespace_lex :: [Token] -> [Token]
 namespace_lex x
-        | head x == (NamespaceSym, "@namespace") = getData $ ST.evalState (
+        | head x == (NamespaceSym, "@namespace") = ST.evalState (
             do
                 a <- findTokenById (NamespaceSym,"")
                 b <- findToken (Static,";")
                 return $ concat [a, b]) x
         | otherwise = []
 
-page_lex :: [Token] -> String
+page_lex :: [Token] -> [Token]
 page_lex x
-        | head x == (PageSym, "@page") = getData $ ST.evalState (
+        | head x == (PageSym, "@page") = ST.evalState (
             do
                 a <- findTokenById (PageSym,"")
                 b <- findToken (Static,";")
                 return $ concat [a, b]) x
         | otherwise = []
 
-font_face_lex :: [Token] -> String
+font_face_lex :: [Token] -> [Token]
 font_face_lex x
-        | head x == (FontFaceSym, "@font-face") = getData $ ST.evalState (
+        | head x == (FontFaceSym, "@font-face") = ST.evalState (
             do
                 a <- findTokenById (FontFaceSym,"")
                 b <- findToken (Static,";")
                 return $ concat [a, b]) x
         | otherwise = []
 
-media_lex :: [Token] -> String
+media_lex :: [Token] -> [Token]
 media_lex x
-        | head x == (MediaSym, "@media") = getData $ ST.evalState (
+        | head x == (MediaSym, "@media") = ST.evalState (
             do
                 a <- findToken (MediaSym, "@media")
                 b <- findBefore (Static, "{")
@@ -217,15 +213,34 @@ media_lex x
                 return $ concat [a, b, c]) x
         | otherwise = []
 
-ruleset_lex :: [Token] -> String
+ruleset_lex :: [Token] -> [Token]
 ruleset_lex x
-        | (fst $ head x) /= S = getData $ ST.evalState (
+        | (fst $ head x) /= S = ST.evalState (
             do
                 a <- findBefore (Static, "{")
                 b <- findPairM (Static, "{") (Static, "}")
                 return $ concat [a, b]) x
         | otherwise = []
 
+getLexem :: ([Token] -> [Token]) -> String -> [Token] -> (String, [Token])
+getLexem f id tokens = (id, f tokens)
+
+splitOnBaseLexems :: [Token] -> [(String, [Token])]
+splitOnBaseLexems [] = []
+splitOnBaseLexems tokens@(x:xs)
+    | fst x == S = splitOnBaseLexems xs
+    | otherwise =
+        case curLexem tokens of
+            Just l -> l : splitOnBaseLexems (snd $ splitAt (length $ snd l) tokens)
+            Nothing -> []
+            where curLexem t = find (\l -> snd l /= []) [
+                    (getLexem (charset_lex) "charset" t),
+                    (getLexem (import_lex) "import" t),
+                    (getLexem (namespace_lex) "namespace" t),
+                    (getLexem (page_lex) "page" tokens),
+                    (getLexem (font_face_lex) "font-face" t),
+                    (getLexem (media_lex) "media" t),
+                    (getLexem (ruleset_lex) "ruleset" t)]
 h :: Parser Char
 h = hexDigit <?> "h"
 

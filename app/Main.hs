@@ -4,6 +4,7 @@ import System.Environment
 import System.IO
 import Text.ParserCombinators.Parsec
 import Css2Scss.Css.Parser
+import Css2Scss.Css.Lexer
 
 
 main :: IO ()
@@ -11,5 +12,9 @@ main = do
         args <- getArgs
         handle <- openFile (head args) ReadMode
         contents <- hGetContents handle
-        parseTest stylesheet (preprocessor contents)
+        let tokens = do
+                parse stylesheet "" (preprocessor contents)
+        case tokens of
+            Right t -> print $ splitOnBaseLexems t
+            Left err -> print err
         hClose handle

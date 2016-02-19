@@ -1,4 +1,40 @@
-module Css2Scss.Css () where
+module Css2Scss.Css
+    ( Property(..)
+    , Ruleset(..)
+    , Media(..)
+    , Definition(..)
+    ) where
 
-import Css2Scss.Css.Lexer
+import Data.List
+import Data.List.Split
+
+import Css2Scss.Css.Lexer as L
 import Css2Scss.Css.Parser
+
+
+data Property   = Property String String deriving(Eq, Show)
+data Ruleset    = Ruleset String [Property] deriving(Eq, Show)
+data Media      = Media String [Ruleset] deriving (Eq, Show)
+data Definition = Definition String String
+
+buildDefinition :: (String, [L.Token]) -> Definition
+buildDefinition (id, tokens) = Definition id (L.getTokensData tokens)
+
+buildDefinitions :: [(String, [L.Token])] -> [Definition]
+buildDefinitions [] = []
+buildDefinitions x = map (buildDefinition) (filter (isDef) x)
+    where isDef d = fst d `elem` ["charset", "import", "namespace", "page", "font-face"]
+
+isSpaceToken :: L.Token -> Bool
+isSpaceToken x = fst x == L.S
+
+-- | Обрезает токены пробельных символов в начале
+-- и конце списка
+chomp :: [L.Token] -> [L.Token]
+chomp x = dropWhileEnd (isSpaceToken) (dropWhile (isSpaceToken) x)
+
+buildProperty :: [L.Token] -> Property
+buildProperty x = Property identifier value
+    where getIdent t = L.getTokensData $ chomp $ fst t
+          identifier = getIdent $ span (/= (Static, ":")) x
+          value = getIdent $ span (/= (Static, ":")) (reverse x)

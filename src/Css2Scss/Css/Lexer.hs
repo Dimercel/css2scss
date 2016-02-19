@@ -2,6 +2,7 @@ module Css2Scss.Css.Lexer
     ( Token (..)
     , TokenId(..)
     , splitOnBaseLexems
+    , getTokensData
     , h
     , nonascii
     , unicode
@@ -155,8 +156,8 @@ findPairM l r = ST.state $ \x -> (betweenPair x, drop (length $ betweenPair x) x
     where betweenPair x = findPair l r x (0, 0)
 
 
-getData :: [Token] -> String
-getData x = concat $ map (\i -> snd i) x
+getTokensData :: [Token] -> String
+getTokensData x = concat $ map (\i -> snd i) x
 
 charsetLexem :: [Token] -> [Token]
 charsetLexem x

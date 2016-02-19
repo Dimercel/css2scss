@@ -25,6 +25,8 @@ library
                      , parsec >= 3.1.9
                      , pcre-heavy
                      , mtl
+                     , containers
+                     , split
   default-language:    Haskell2010
 
 executable css2scss-exe
@@ -36,6 +38,8 @@ executable css2scss-exe
                      , parsec >= 3.1.9
                      , pcre-heavy
                      , mtl
+                     , containers
+                     , split
   default-language:    Haskell2010
 
 test-suite css2scss-test

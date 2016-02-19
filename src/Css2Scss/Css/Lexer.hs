@@ -158,8 +158,8 @@ findPairM l r = ST.state $ \x -> (betweenPair x, drop (length $ betweenPair x) x
 getData :: [Token] -> String
 getData x = concat $ map (\i -> snd i) x
 
-charset_lex :: [Token] -> [Token]
-charset_lex x
+charsetLexem :: [Token] -> [Token]
+charsetLexem x
         | head x == (CharsetSym, "@charset") = ST.evalState (
             do
                 a <- findTokenById (CharsetSym,"")
@@ -167,8 +167,8 @@ charset_lex x
                 return $ concat [a, b]) x
         | otherwise = []
 
-import_lex :: [Token] -> [Token]
-import_lex x
+importLexem :: [Token] -> [Token]
+importLexem x
         | head x == (CharsetSym, "@import") = ST.evalState (
             do
                 a <- findTokenById (ImportSym,"")
@@ -176,8 +176,8 @@ import_lex x
                 return $ concat [a, b]) x
         | otherwise = []
 
-namespace_lex :: [Token] -> [Token]
-namespace_lex x
+namespaceLexem :: [Token] -> [Token]
+namespaceLexem x
         | head x == (NamespaceSym, "@namespace") = ST.evalState (
             do
                 a <- findTokenById (NamespaceSym,"")
@@ -185,8 +185,8 @@ namespace_lex x
                 return $ concat [a, b]) x
         | otherwise = []
 
-page_lex :: [Token] -> [Token]
-page_lex x
+pageLexem :: [Token] -> [Token]
+pageLexem x
         | head x == (PageSym, "@page") = ST.evalState (
             do
                 a <- findTokenById (PageSym,"")
@@ -194,8 +194,8 @@ page_lex x
                 return $ concat [a, b]) x
         | otherwise = []
 
-font_face_lex :: [Token] -> [Token]
-font_face_lex x
+fontFaceLexem :: [Token] -> [Token]
+fontFaceLexem x
         | head x == (FontFaceSym, "@font-face") = ST.evalState (
             do
                 a <- findTokenById (FontFaceSym,"")
@@ -203,8 +203,8 @@ font_face_lex x
                 return $ concat [a, b]) x
         | otherwise = []
 
-media_lex :: [Token] -> [Token]
-media_lex x
+mediaLexem :: [Token] -> [Token]
+mediaLexem x
         | head x == (MediaSym, "@media") = ST.evalState (
             do
                 a <- findToken (MediaSym, "@media")
@@ -213,8 +213,8 @@ media_lex x
                 return $ concat [a, b, c]) x
         | otherwise = []
 
-ruleset_lex :: [Token] -> [Token]
-ruleset_lex x
+rulesetLexem :: [Token] -> [Token]
+rulesetLexem x
         | (fst $ head x) /= S = ST.evalState (
             do
                 a <- findBefore (Static, "{")
@@ -234,13 +234,15 @@ splitOnBaseLexems tokens@(x:xs)
             Just l -> l : splitOnBaseLexems (snd $ splitAt (length $ snd l) tokens)
             Nothing -> []
             where curLexem t = find (\l -> snd l /= []) [
-                    (getLexem (charset_lex) "charset" t),
-                    (getLexem (import_lex) "import" t),
-                    (getLexem (namespace_lex) "namespace" t),
-                    (getLexem (page_lex) "page" tokens),
-                    (getLexem (font_face_lex) "font-face" t),
-                    (getLexem (media_lex) "media" t),
-                    (getLexem (ruleset_lex) "ruleset" t)]
+                    (getLexem (charsetLexem)   "charset"   t),
+                    (getLexem (importLexem)    "import"    t),
+                    (getLexem (namespaceLexem) "namespace" t),
+                    (getLexem (pageLexem)      "page"      t),
+                    (getLexem (fontFaceLexem)  "font-face" t),
+                    (getLexem (mediaLexem)     "media"     t),
+                    (getLexem (rulesetLexem)   "ruleset"   t)]
+
+
 h :: Parser Char
 h = hexDigit <?> "h"
 

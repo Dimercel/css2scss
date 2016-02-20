@@ -5,6 +5,8 @@ module Css2Scss.Css
     , Definition(..)
     , buildDefinitions
     , buildRulesets
+    , buildMedias
+    , chainRuleset
     ) where
 
 import Data.List
@@ -52,3 +54,22 @@ buildRulesets :: [(String, [L.Token])] -> [Ruleset]
 buildRulesets [] = []
 buildRulesets x = map (buildRuleset . snd) (filter (isRuleset) x)
     where isRuleset r = fst r == "ruleset"
+
+mediaHead :: [L.Token] -> String
+mediaHead x = L.getTokensData $ chomp $ fst $ span (/= (L.Static, "{")) x
+
+chainRuleset :: [L.Token] -> [[L.Token]]
+chainRuleset x
+        | (L.Static, "}") `notElem` x = []
+        | otherwise = let (ruleset, other) = span (/= (L.Static, "}")) x
+                          in (concat [ruleset, [(L.Static, "}")]]) : chainRuleset (tail other)
+
+buildMedia :: [L.Token] -> Media
+buildMedia x = Media (mediaHead x) rulesets
+    where body = chomp $ tail $ init $ snd $ span (/= (L.Static, "{")) x
+          rulesets = map (buildRuleset) (chainRuleset body)
+
+buildMedias :: [(String, [L.Token])] -> [Media]
+buildMedias [] = []
+buildMedias x = map (buildMedia . snd) (filter (isMedia) x)
+    where isMedia m = fst m == "media"

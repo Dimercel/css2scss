@@ -53,35 +53,35 @@ ignore_comments css =
         gsub [re|\/\*[^*]*\*+([^/*][^*]*\*+)*\/|] (" " :: String) css
 
 
-stylesheet :: Parser [L.Token]
+stylesheet :: Parser [[L.Token]]
 stylesheet = concat <$> sequence [
-        (option [] $ do
+        (count 1 (option [] $ do
             res <- sequence [
                 try $ count 1 (L._CHARSET_SYM),
                 many L._S,
                 count 1 (L._STRING),
                 many L._S,
                 count 1 (L._STATIC ";")]
-            return $ concat res),
-        (many $ do
+            return $ concat res)),
+        (count 1 (many $ do
                 L._S
                 <|> L._CDO
-                <|> L._CDC),
-        (concat <$> (many $ do
+                <|> L._CDC)),
+        (many $ do
             i <- try _import
             s <- many $ do
                     L._S
                     <|> L._CDO
                     <|> L._CDC
-            return $ i ++ s)),
-        (concat <$> (many $ do
+            return $ i ++ s),
+        (many $ do
             i <- try namespace
             s <- many $ do
                     L._S
                     <|> L._CDO
                     <|> L._CDC
-            return $ i ++ s)),
-        (concat <$> (many $ do
+            return $ i ++ s),
+        (many $ do
             res <- sequence [
                 (ruleset
                 <|> try media
@@ -91,7 +91,7 @@ stylesheet = concat <$> sequence [
                     L._S
                     <|> L._CDO
                     <|> L._CDC)]
-            return $ concat res))]
+            return $ concat res)]
 
 _import :: Parser [L.Token]
 _import = concat <$> sequence [

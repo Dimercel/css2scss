@@ -14,5 +14,7 @@ main = do
         contents <- hGetContents handle
         let tokens = do
                 parse stylesheet "" (preprocessor contents)
-        print $ tokens
+        case tokens of
+            Right t -> print $ splitOnBaseLexems t
+            Left err -> print err
         hClose handle

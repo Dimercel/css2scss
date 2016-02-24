@@ -3,6 +3,7 @@ module Css2Scss.Css.Lexer
     , TokenId(..)
     , splitOnBaseLexems
     , getTokensData
+    , chomp
     , h
     , nonascii
     , unicode
@@ -70,7 +71,6 @@ import Text.Parsec.Char
 
 import Data.List
 import Data.Maybe
-import Control.Monad.State as ST
 
 data TokenId = S
                | Cdo
@@ -117,132 +117,65 @@ data TokenId = S
 type Token = (TokenId, String)
 
 
-_findToken :: Token -> (Token -> Token -> Bool) -> ST.State [Token] [Token]
-_findToken t f = ST.state $ \x -> (take (equalElem t x) x, drop (equalElem t x) x)
-    where equalElem t elems = let inx = findIndex (f t) elems
-            in case isJust inx of
-                   True -> 1 + (fromJust inx)
-                   False -> 0
-
-findTokenById :: Token -> ST.State [Token] [Token]
-findTokenById t = _findToken t (\x y -> fst x == fst y)
-
-findToken :: Token -> ST.State [Token] [Token]
-findToken t = _findToken t (==)
-
-
-findBefore :: Token -> ST.State [Token] [Token]
-findBefore t = ST.state $ \x -> (take (equalElem t x) x, drop (equalElem t x) x)
-    where equalElem t elems = let inx = findIndex (== t) elems
-            in case isJust inx of
-                   True -> (fromJust inx)
-                   False -> 0
-
--- | Возвращает подмассив содержащий токены находящиеся 
--- между парными токенами. Учитывется случай вложенности токенов.
--- Параметры: первый парный элемент, второй парный элемент,
--- массив токенов, кол-во парных элементов(изначально (0,0))
-findPair :: Token -> Token -> [Token] -> (Int, Int) -> [Token]
-findPair _ _ [] _ = []
-findPair l r (x:xs) pos
-    | fst pos == snd pos && pos /= (0, 0) = []
-    | otherwise = x : findPair l r xs (fst pos + equal l, snd pos + equal r)
-        where equal s = case x == s of
-                            True -> 1
-                            False -> 0
-
-findPairM :: Token -> Token -> ST.State [Token] [Token]
-findPairM l r = ST.state $ \x -> (betweenPair x, drop (length $ betweenPair x) x)
-    where betweenPair x = findPair l r x (0, 0)
-
-
 getTokensData :: [Token] -> String
 getTokensData x = concat $ map (\i -> snd i) x
 
-charsetLexem :: [Token] -> [Token]
-charsetLexem x
-        | head x == (CharsetSym, "@charset") = ST.evalState (
-            do
-                a <- findTokenById (CharsetSym,"")
-                b <- findToken (Static,";")
-                return $ concat [a, b]) x
-        | otherwise = []
+-- | Обрезает токены пробельных символов в начале
+-- и конце списка
+chomp :: [Token] -> [Token]
+chomp x = dropWhileEnd (isSpaceToken) (dropWhile (isSpaceToken) x)
 
-importLexem :: [Token] -> [Token]
-importLexem x
-        | head x == (CharsetSym, "@import") = ST.evalState (
-            do
-                a <- findTokenById (ImportSym,"")
-                b <- findToken (Static,";")
-                return $ concat [a, b]) x
-        | otherwise = []
+isSpaceToken :: Token -> Bool
+isSpaceToken t = fst t == S
 
-namespaceLexem :: [Token] -> [Token]
-namespaceLexem x
-        | head x == (NamespaceSym, "@namespace") = ST.evalState (
-            do
-                a <- findTokenById (NamespaceSym,"")
-                b <- findToken (Static,";")
-                return $ concat [a, b]) x
-        | otherwise = []
+isSpaceLexem :: [Token] -> Bool
+isSpaceLexem [] = False
+isSpaceLexem t = all (isSpaceToken) t
 
-pageLexem :: [Token] -> [Token]
-pageLexem x
-        | head x == (PageSym, "@page") = ST.evalState (
-            do
-                a <- findTokenById (PageSym,"")
-                b <- findToken (Static,";")
-                return $ concat [a, b]) x
-        | otherwise = []
+isCharsetLexem :: [Token] -> Bool
+isCharsetLexem [] = False
+isCharsetLexem (x:xs) = fst x == CharsetSym
 
-fontFaceLexem :: [Token] -> [Token]
-fontFaceLexem x
-        | head x == (FontFaceSym, "@font-face") = ST.evalState (
-            do
-                a <- findTokenById (FontFaceSym,"")
-                b <- findToken (Static,";")
-                return $ concat [a, b]) x
-        | otherwise = []
+isImportLexem :: [Token] -> Bool
+isImportLexem [] = False
+isImportLexem (x:xs) = fst x == ImportSym
 
-mediaLexem :: [Token] -> [Token]
-mediaLexem x
-        | head x == (MediaSym, "@media") = ST.evalState (
-            do
-                a <- findToken (MediaSym, "@media")
-                b <- findBefore (Static, "{")
-                c <- findPairM (Static, "{") (Static, "}")
-                return $ concat [a, b, c]) x
-        | otherwise = []
+isNamespaceLexem :: [Token] -> Bool
+isNamespaceLexem [] = False
+isNamespaceLexem (x:xs) = fst x == NamespaceSym
 
-rulesetLexem :: [Token] -> [Token]
-rulesetLexem x
-        | (fst $ head x) /= S = ST.evalState (
-            do
-                a <- findBefore (Static, "{")
-                b <- findPairM (Static, "{") (Static, "}")
-                return $ concat [a, b]) x
-        | otherwise = []
+isPageLexem :: [Token] -> Bool
+isPageLexem [] = False
+isPageLexem (x:xs) = fst x == PageSym
 
-getLexem :: ([Token] -> [Token]) -> String -> [Token] -> (String, [Token])
-getLexem f id tokens = (id, f tokens)
+isFontFaceLexem :: [Token] -> Bool
+isFontFaceLexem [] = False
+isFontFaceLexem (x:xs) = fst x == FontFaceSym
 
-splitOnBaseLexems :: [Token] -> [(String, [Token])]
-splitOnBaseLexems [] = []
-splitOnBaseLexems tokens@(x:xs)
-    | fst x == S = splitOnBaseLexems xs
-    | otherwise =
-        case curLexem tokens of
-            Just l -> l : splitOnBaseLexems (snd $ splitAt (length $ snd l) tokens)
-            Nothing -> []
-            where curLexem t = find (\l -> snd l /= []) [
-                    (getLexem (charsetLexem)   "charset"   t),
-                    (getLexem (importLexem)    "import"    t),
-                    (getLexem (namespaceLexem) "namespace" t),
-                    (getLexem (pageLexem)      "page"      t),
-                    (getLexem (fontFaceLexem)  "font-face" t),
-                    (getLexem (mediaLexem)     "media"     t),
-                    (getLexem (rulesetLexem)   "ruleset"   t)]
+isMediaLexem :: [Token] -> Bool
+isMediaLexem [] = False
+isMediaLexem (x:xs) = fst x == MediaSym
 
+isRulesetLexem :: [Token] -> Bool
+isRulesetLexem [] = False
+isRulesetLexem t
+        | isSpaceLexem t = False
+        | otherwise = True
+
+splitOnBaseLexems :: [[Token]] -> [(String, [Token])]
+splitOnBaseLexems tokens = notError $ map (buildLexem) (filter (/= []) tokens)
+        where buildLexem x = case lexems x of
+                                 Just l -> (snd l, chomp x)
+                                 Nothing -> ("error", x)
+              notError = filter (\x -> fst x /= "error")
+              lexems l = find (\x -> fst x == True) [
+                    (isCharsetLexem l,   "charset"  ),
+                    (isImportLexem l,    "import"   ),
+                    (isNamespaceLexem l, "namespace"),
+                    (isPageLexem l,      "page"     ),
+                    (isFontFaceLexem l,  "font-face"),
+                    (isMediaLexem l,     "media"    ),
+                    (isRulesetLexem l,   "ruleset"  )]
 
 h :: Parser Char
 h = hexDigit <?> "h"

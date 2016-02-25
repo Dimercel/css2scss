@@ -23,33 +23,37 @@ data Definition = Definition String String
 
 
 buildDefinition :: (String, [L.Token]) -> Definition
-buildDefinition (id, tokens) = Definition id (L.getTokensData tokens)
+buildDefinition (id, tokens) = Definition id (L.getTokensData $ L.chomp tokens)
 
 buildDefinitions :: [(String, [L.Token])] -> [Definition]
 buildDefinitions [] = []
 buildDefinitions x = map (buildDefinition) (filter (isDef) x)
     where isDef d = fst d `elem` ["charset", "import", "namespace", "page", "font-face"]
 
+clearTokensData :: [L.Token] -> String
+clearTokensData tokens = L.getTokensData $ L.chomp tokens
+
+getTokBefore :: L.Token -> [L.Token] -> [L.Token]
+getTokBefore sep tokens = fst $ span (/= sep) tokens
+
+getTokAfter :: L.Token -> [L.Token] -> [L.Token]
+getTokAfter sep tokens = tail $ snd $ span (/= sep) tokens
+
 buildProperty :: [L.Token] -> Property
-buildProperty x = Property identifier value
-    where getIdent t = L.getTokensData $ L.chomp $ fst t
-          identifier = getIdent $ span (/= (L.Static, ":")) x
-          value = getIdent $ span (/= (L.Static, ":")) (reverse x)
+buildProperty t = Property (identifier t) (value t)
+    where identifier x = clearTokensData $ getTokBefore (L.Static, ":") x
+          value x = identifier (reverse x)
 
 buildRuleset :: [L.Token] -> Ruleset
 buildRuleset x = Ruleset selector properties
-    where getIdent t = L.getTokensData $ L.chomp $ fst t
-          selector = getIdent $ span (/= (L.Static, "{")) x
-          getPropTokens t = L.chomp $ tail $ init $ snd $ span (/= (L.Static, "{")) t
+    where selector = filter (/= '\n') $ clearTokensData $ getTokBefore (L.Static, "{") x
           properties = map (buildProperty) (endBy [(L.Static, ";")] (getPropTokens x))
+          getPropTokens t = L.chomp $ init $ getTokAfter (L.Static, "{") t
 
 buildRulesets :: [(String, [L.Token])] -> [Ruleset]
 buildRulesets [] = []
 buildRulesets x = map (buildRuleset . snd) (filter (isRuleset) x)
     where isRuleset r = fst r == "ruleset"
-
-mediaHead :: [L.Token] -> String
-mediaHead x = L.getTokensData $ L.chomp $ fst $ span (/= (L.Static, "{")) x
 
 chainRuleset :: [L.Token] -> [[L.Token]]
 chainRuleset x
@@ -58,9 +62,10 @@ chainRuleset x
                           in (concat [ruleset, [(L.Static, "}")]]) : chainRuleset (tail other)
 
 buildMedia :: [L.Token] -> Media
-buildMedia x = Media (mediaHead x) rulesets
-    where body = L.chomp $ tail $ init $ snd $ span (/= (L.Static, "{")) x
+buildMedia x = Media mediaHead rulesets
+    where mediaHead = clearTokensData $ getTokBefore (L.Static, "{") x
           rulesets = map (buildRuleset) (chainRuleset body)
+          body = L.chomp $ init $ getTokAfter (L.Static, "{") x
 
 buildMedias :: [(String, [L.Token])] -> [Media]
 buildMedias [] = []

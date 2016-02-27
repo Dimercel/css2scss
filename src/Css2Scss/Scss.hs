@@ -8,9 +8,6 @@ module Css2Scss.Scss
 
 import Data.Tree
 
-import Css2Scss.Scss.Render
-import Css2Scss.Scss.Converter
-
 
 data Property = Property { propName :: String, propVal :: String } deriving(Show, Eq)
 data Rule     = Rule { selector :: String, ruleProps :: [Property]} deriving(Show, Eq)

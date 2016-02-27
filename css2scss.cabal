@@ -21,6 +21,7 @@ library
                        Css2Scss.Css.Parser
                        Css2Scss.Scss
                        Css2Scss.Scss.Render
+                       Css2Scss.Scss.Converter
   build-depends:       base >= 4.7 && < 5
                      , parsec >= 3.1.9
                      , pcre-heavy

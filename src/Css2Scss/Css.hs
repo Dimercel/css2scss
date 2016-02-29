@@ -22,6 +22,9 @@ data Media      = Media String [Ruleset] deriving (Eq, Show)
 data Definition = Definition String String
 
 
+instance Ord Ruleset where
+        compare (Ruleset x _) (Ruleset y _) = compare x y
+
 buildDefinition :: (String, [L.Token]) -> Definition
 buildDefinition (id, tokens) = Definition id (L.getTokensData $ L.chomp tokens)
 

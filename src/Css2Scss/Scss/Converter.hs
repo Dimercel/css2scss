@@ -89,10 +89,10 @@ groupSelectors rulesets = groupBy (isOneGroup) (sort rulesets)
 -- SCSS-стилей.
 buildSCSSRuleset :: GroupingStyles -> SC.Ruleset
 buildSCSSRuleset rules
-        | length rules == 1 = Node (toSCSSRule prefix) []
-        | otherwise = Node (toSCSSRule prefix)
+        | length rules == 1 = Node (toSCSSRule subselector) []
+        | otherwise = Node (toSCSSRule subselector)
             (map (buildSCSSRuleset) (groupSelectors xs))
-        where (prefix : xs) = rules
+        where (subselector : xs) = rules
 
 -- | Группирует стили и строит на их основе древовидную структуру SCSS стилей
 buildSCSSRulesets :: [Ruleset] -> [SC.Ruleset]

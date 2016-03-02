@@ -14,3 +14,4 @@ data Rule     = Rule { selector :: String, ruleProps :: [Property]} deriving(Sho
 type Ruleset  = Tree Rule
 data Variable = Variable String String deriving (Show, Eq)
 data Mixin    = Mixin String [String] [Property] deriving(Show, Eq)
+type Extend   = Rule

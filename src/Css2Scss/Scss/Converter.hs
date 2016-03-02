@@ -97,3 +97,6 @@ buildSCSSRuleset rules
 -- | Группирует стили и строит на их основе древовидную структуру SCSS стилей
 buildSCSSRulesets :: [Ruleset] -> [SC.Ruleset]
 buildSCSSRulesets ruleset = map (buildSCSSRuleset) (groupSelectors ruleset)
+
+cyclePermutation :: [a] -> [a]
+cyclePermutation (x:xs) = concat $ [xs, [x]]

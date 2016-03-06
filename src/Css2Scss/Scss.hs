@@ -4,6 +4,9 @@ module Css2Scss.Scss
     , Ruleset(..)
     , Variable(..)
     , Mixin(..)
+    , Extend(..)
+    , isEmptyRule
+    , isNotEmptyRule
     ) where
 
 import Data.Tree
@@ -15,3 +18,10 @@ type Ruleset  = Tree Rule
 data Variable = Variable String String deriving (Show, Eq)
 data Mixin    = Mixin String [String] [Property] deriving(Show, Eq)
 type Extend   = Rule
+
+isEmptyRule :: Rule -> Bool
+isEmptyRule (Rule _ []) = True
+isEmptyRule _  = False
+
+isNotEmptyRule :: Rule -> Bool
+isNotEmptyRule x = not $ isEmptyRule x

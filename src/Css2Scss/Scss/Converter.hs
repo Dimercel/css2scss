@@ -23,6 +23,7 @@
 module Css2Scss.Scss.Converter
     ( makeVariables
     , buildSCSSRulesets
+    , buildExtends
     ) where
 
 import Text.Regex.PCRE.Light (match, compile)
@@ -30,6 +31,7 @@ import qualified Data.ByteString.Char8 as S
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.List
+import Data.Ord
 import Data.Tree
 
 import Css2Scss.Css
@@ -55,7 +57,7 @@ makeVariables rulesets = buildVariables $ colorStat
               (map (\x -> (head x, length x)) (group $ sort colors))
           buildVariables stat = map (\x -> variable (snd x) (fst x))
               (zipWith (\x y -> (fst x, y)) stat [0 ..])
-          variable n val = SC.Variable ("color-" ++ show n) val
+          variable n val = SC.Variable ("color" ++ show n) val
 
 toSCSSProp :: Property -> SC.Property
 toSCSSProp (Property name val) = SC.Property name val
@@ -98,5 +100,33 @@ buildSCSSRuleset rules
 buildSCSSRulesets :: [Ruleset] -> [SC.Ruleset]
 buildSCSSRulesets ruleset = map (buildSCSSRuleset) (groupSelectors ruleset)
 
-cyclePermutation :: [a] -> [a]
-cyclePermutation (x:xs) = concat $ [xs, [x]]
+getProps :: Ruleset -> [Property]
+getProps (Ruleset _ props) = props
+
+numberingRules :: [SC.Extend] -> [SC.Extend]
+numberingRules x = map (addNum) (zip x [0 ..])
+        where addNum ((SC.Rule name p), n) = SC.Rule (name ++ (show n)) p 
+
+-- | Находиит и собирает в единый список все расшинения по переданному
+-- набору CSS правил
+buildRawExtends :: [Ruleset] -> [SC.Extend]
+buildRawExtends [] = []
+buildRawExtends rulesets = convert (findExtend rulesets) : buildRawExtends (tail rulesets)
+    where convert props = SC.Rule "@extend" (map (toSCSSProp) props)
+          findExtend (x:[]) = []
+          findExtend (x:xs) = limit $ maximumBy (comparing length) $
+              map (\y -> maxSubSequence (getProps x) (getProps y) ) xs
+          limit e = if length e > 2 then e else []
+
+buildExtends :: [Ruleset] -> [SC.Extend]
+buildExtends rulesets = postProcess $ buildRawExtends rulesets
+    where postProcess x = numberingRules $ uniq $ notEmpty $ x
+          uniq = nub
+          notEmpty = filter (SC.isNotEmptyRule)
+
+-- | Возвращает максимальную, общую подпоследовательность в двух списках
+maxSubSequence :: (Eq a) => [a] -> [a] -> [a]
+maxSubSequence xs ys = reverse . maximumBy (comparing length) .
+    concat $ [f xs' ys | xs' <- tails xs] ++ [f xs ys' | ys' <- tail $ tails ys]
+        where f xs ys = scanl g [] $ zip xs ys
+              g z (x, y) = if x == y then x:z else []

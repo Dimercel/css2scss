@@ -7,6 +7,8 @@ module Css2Scss.Css
     , buildRulesets
     , buildMedias
     , chainRuleset
+    , getTokBefore
+    , getTokAfter
     ) where
 
 import Data.List
@@ -40,7 +42,9 @@ getTokBefore :: L.Token -> [L.Token] -> [L.Token]
 getTokBefore sep tokens = fst $ span (/= sep) tokens
 
 getTokAfter :: L.Token -> [L.Token] -> [L.Token]
-getTokAfter sep tokens = tail $ snd $ span (/= sep) tokens
+getTokAfter sep tokens = case snd $ span (/= sep) tokens of
+                                  [] -> []
+                                  x -> tail x
 
 buildProperty :: [L.Token] -> Property
 buildProperty t = Property (identifier t) (value t)

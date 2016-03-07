@@ -58,6 +58,7 @@ test-suite css2scss-test
   other-modules:       Css2Scss.Test.Lexer
                      , Css2Scss.Test.Parser
                      , Css2Scss.Test.Scss
+                     , Css2Scss.Test.Css
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
 

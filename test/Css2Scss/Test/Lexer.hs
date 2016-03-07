@@ -1,12 +1,56 @@
-module Css2Scss.Test.Lexer (run) where
+module Css2Scss.Test.Lexer (run, TokenId) where
 
 
 import Data.List
 import Data.Either
 import Test.Hspec
+import Test.QuickCheck
 import Text.ParserCombinators.Parsec
 
 import Css2Scss.Css.Lexer as L
+
+instance Arbitrary L.TokenId where
+        arbitrary =
+           oneof  [ return S
+                  , return Cdo
+                  , return Cdc
+                  , return Includes
+                  , return DashMatch
+                  , return PrefixMatch
+                  , return SuffixMatch
+                  , return SubMatch
+                  , return String'
+                  , return Ident
+                  , return Hash
+                  , return Plus
+                  , return Greater
+                  , return Comma
+                  , return Tilde
+                  , return Not
+                  , return AtKeyWord
+                  , return Dimension
+                  , return ImportSym
+                  , return PageSym
+                  , return MediaSym
+                  , return FontFaceSym
+                  , return CharsetSym
+                  , return NamespaceSym
+                  , return ImportantSym
+                  , return Ems
+                  , return Exs
+                  , return Length
+                  , return Angle
+                  , return Time
+                  , return Freq
+                  , return Dimen
+                  , return Percentage
+                  , return Number
+                  , return Uri
+                  , return MediaLimit
+                  , return Function
+                  , return UnicodeRange
+                  , return SubStringMatch
+                  , return Static ]
 
 rightTest :: (Parser String) -> [String] -> Bool
 rightTest f l = all (==True) (map (\x -> Right x == parse f "test" x) l)

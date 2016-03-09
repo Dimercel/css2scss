@@ -62,6 +62,9 @@ makeVariables rulesets = buildVariables $ colorStat
 toSCSSProp :: Property -> SC.Property
 toSCSSProp (Property name val) = SC.Property name val
 
+toCSSProp :: SC.Property -> Property
+toCSSProp (SC.Property name val) = Property name val
+
 toSCSSRule :: Ruleset -> SC.Rule
 toSCSSRule (Ruleset selector props) = SC.Rule selector (map (toSCSSProp) props)
 
@@ -123,6 +126,17 @@ buildExtends rulesets = postProcess $ buildRawExtends rulesets
     where postProcess x = numberingRules $ uniq $ notEmpty $ x
           uniq = nub
           notEmpty = filter (SC.isNotEmptyRule)
+
+contentExtend :: SC.Extend -> Ruleset -> Bool
+contentExtend (SC.Rule _ extProps) (Ruleset _ props) = extProps `isSubsequenceOf` ruleProps
+        where ruleProps = map (toSCSSProp) props
+
+replaceExtend :: SC.Extend -> Ruleset -> Ruleset
+replaceExtend ext@(SC.Rule extName extProps) rule@(Ruleset ruleName props)
+    | not $ contentExtend ext rule = rule
+    | otherwise = Ruleset ruleName (map toCSSProp withExtend)
+    where ruleProps = map (toSCSSProp) props
+          withExtend = (SC.Property "@extend" extName) : filter (`notElem` extProps) ruleProps
 
 -- | Возвращает максимальную, общую подпоследовательность в двух списках
 maxSubSequence :: (Eq a) => [a] -> [a] -> [a]

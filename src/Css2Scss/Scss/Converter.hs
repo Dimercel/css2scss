@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 -- |
 -- Данный модуль непосредственно занимается конвертацией CSS структур в SCSS.
@@ -39,6 +41,22 @@ import qualified Css2Scss.Scss as SC
 
 type GroupingStyles = [Ruleset]
 
+class Convertable a b where
+        convert :: a -> b
+
+instance Convertable Property SC.Property where
+        convert (Property name val) = SC.Property name val
+
+instance Convertable SC.Property Property where
+        convert (SC.Property name val) = Property name val
+
+instance Convertable Ruleset SC.Rule where
+        convert (Ruleset selector props) = SC.Rule selector (map convert props)
+
+instance Convertable SC.Rule Ruleset where
+        convert (SC.Rule selector props) = Ruleset selector (map convert props)
+
+
 findColorInProp :: Property -> Maybe String
 findColorInProp (Property _ val) = case match (compile "#\\d{3,6}" []) (S.pack val) [] of
                        Just m -> Just (S.unpack $ head $ m)
@@ -58,15 +76,6 @@ makeVariables rulesets = buildVariables $ colorStat
           buildVariables stat = map (\x -> variable (snd x) (fst x))
               (zipWith (\x y -> (fst x, y)) stat [0 ..])
           variable n val = SC.Variable ("color" ++ show n) val
-
-toSCSSProp :: Property -> SC.Property
-toSCSSProp (Property name val) = SC.Property name val
-
-toCSSProp :: SC.Property -> Property
-toCSSProp (SC.Property name val) = Property name val
-
-toSCSSRule :: Ruleset -> SC.Rule
-toSCSSRule (Ruleset selector props) = SC.Rule selector (map (toSCSSProp) props)
 
 -- | Проверяет, явялется ли первый селектор подселектором второго.
 -- Например: body li > a является подселектором body li. Особо следует
@@ -94,8 +103,8 @@ groupSelectors rulesets = groupBy (isOneGroup) (sort rulesets)
 -- SCSS-стилей.
 buildSCSSRuleset :: GroupingStyles -> SC.Ruleset
 buildSCSSRuleset rules
-        | length rules == 1 = Node (toSCSSRule subselector) []
-        | otherwise = Node (toSCSSRule subselector)
+        | length rules == 1 = Node (convert subselector) []
+        | otherwise = Node (convert subselector)
             (map (buildSCSSRuleset) (groupSelectors xs))
         where (subselector : xs) = rules
 
@@ -114,8 +123,8 @@ numberingRules x = map (addNum) (zip x [0 ..])
 -- набору CSS правил
 buildRawExtends :: [Ruleset] -> [SC.Extend]
 buildRawExtends [] = []
-buildRawExtends rulesets = convert (findExtend rulesets) : buildRawExtends (tail rulesets)
-    where convert props = SC.Rule "@extend" (map (toSCSSProp) props)
+buildRawExtends rulesets = convertRules (findExtend rulesets) : buildRawExtends (tail rulesets)
+    where convertRules props = SC.Rule "@extend" (map convert props)
           findExtend (x:[]) = []
           findExtend (x:xs) = limit $ maximumBy (comparing length) $
               map (\y -> maxSubSequence (getProps x) (getProps y) ) xs
@@ -129,13 +138,13 @@ buildExtends rulesets = postProcess $ buildRawExtends rulesets
 
 contentExtend :: SC.Extend -> Ruleset -> Bool
 contentExtend (SC.Rule _ extProps) (Ruleset _ props) = extProps `isSubsequenceOf` ruleProps
-        where ruleProps = map (toSCSSProp) props
+        where ruleProps = map convert props
 
 replaceExtend :: SC.Extend -> Ruleset -> Ruleset
 replaceExtend ext@(SC.Rule extName extProps) rule@(Ruleset ruleName props)
     | not $ contentExtend ext rule = rule
-    | otherwise = Ruleset ruleName (map toCSSProp withExtend)
-    where ruleProps = map (toSCSSProp) props
+    | otherwise = Ruleset ruleName (map convert withExtend)
+    where ruleProps = map convert props
           withExtend = (SC.Property "@extend" extName) : filter (`notElem` extProps) ruleProps
 
 -- | Возвращает максимальную, общую подпоследовательность в двух списках

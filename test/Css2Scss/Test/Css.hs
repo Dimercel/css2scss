@@ -1,6 +1,8 @@
 module Css2Scss.Test.Css (run) where
 
 import Test.QuickCheck
+import Test.QuickCheck.Gen (unGen)
+import Test.QuickCheck.Random
 import qualified Css2Scss.Css as C
 import Css2Scss.Test.Lexer (TokenId)
 import Css2Scss.Css.Lexer (Token(..), TokenId(..))
@@ -16,17 +18,19 @@ listWithToken t = do
 listWithOutToken:: Token -> Gen [Token]
 listWithOutToken t = (filter (/= t)) <$> (arbitrary :: Gen [Token])
 
-testGetTokBefore t ts = C.getTokBefore t ts /= [] ==> t `notElem` ts
-    ==> (length $ fst $ span (/=t) ts) == (length $ C.getTokBefore t ts)
+prop_getTokBefore t = t `elem` withT
+        ==> (length $ C.getTokBefore t withT) <= length withT
+        ==> C.getTokBefore t withOutT == []
+            where withT = unGen (listWithToken t) (mkQCGen 0) 0
+                  withOutT = unGen (listWithOutToken t) (mkQCGen 0) 0
 
-testGetTokAfter t ts
-    | t `elem` ts = t `elem` ts
-        ==> (length $ C.getTokAfter t ts) < length ts
-        ==> (head $ C.getTokAfter t ts) /= t
-    | t `notElem` ts = t `notElem` ts 
-        ==> C.getTokAfter t ts == []
+prop_getTokAfter t = t `elem` withT
+        ==> (length $ C.getTokAfter t withT) < length withT
+        ==> C.getTokAfter t withOutT == []
+            where withT = unGen (listWithToken t) (mkQCGen 0) 0
+                  withOutT = unGen (listWithOutToken t) (mkQCGen 0) 0
 
 run :: IO ()
 run = do
-        quickCheck (testGetTokBefore :: Token -> [Token] -> Property)
-        quickCheck (testGetTokAfter :: Token -> [Token] -> Property)
+        quickCheck (prop_getTokBefore :: Token -> Property)
+        quickCheck (prop_getTokAfter :: Token -> Property)

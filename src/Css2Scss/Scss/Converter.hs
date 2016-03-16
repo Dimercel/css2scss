@@ -67,6 +67,9 @@ findColorInProp (Property _ val) = case match (compile "#\\d{3,6}" []) (S.pack v
 colorLimit :: Int
 colorLimit = 3
 
+
+-- | Ищет одинаковые значения цветов и на основе этой информации формирует
+-- список scss-переменных
 makeVariables :: [Ruleset] -> [SC.Variable]
 makeVariables rulesets = buildVariables $ colorStat
                          $ map (fromJust) (concat $ map (findColors) rulesets)
@@ -115,6 +118,8 @@ buildSCSSRulesets ruleset = map (buildSCSSRuleset) (groupSelectors ruleset)
 getProps :: Ruleset -> [Property]
 getProps (Ruleset _ props) = props
 
+-- | Уникализирует имена расширений по средствам добавления к имени 
+-- числового индекса
 numberingRules :: [SC.Extend] -> [SC.Extend]
 numberingRules x = map (addNum) (zip x [0 ..])
         where addNum ((SC.Rule name p), n) = SC.Rule (name ++ (show n)) p 
@@ -136,6 +141,7 @@ buildExtends rulesets = postProcess $ buildRawExtends rulesets
           uniq = nub
           notEmpty = filter (SC.isNotEmptyRule)
 
+-- | Содержится ли указанное расширение в правилах
 contentExtend :: SC.Extend -> Ruleset -> Bool
 contentExtend (SC.Rule _ extProps) (Ruleset _ props) = extProps `isSubsequenceOf` ruleProps
         where ruleProps = map convert props

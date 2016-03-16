@@ -23,7 +23,7 @@
 -- средствам SCSS директивы @extend.
 
 module Css2Scss.Scss.Converter
-    ( makeVariables
+    ( buildVariables
     , buildSCSSRulesets
     , buildExtends
     ) where
@@ -57,28 +57,32 @@ instance Convertable SC.Rule Ruleset where
         convert (SC.Rule selector props) = Ruleset selector (map convert props)
 
 
+-- | Отыскивает цветовое значение в css-свойстве и возвращает его в виде
+-- строки
 findColorInProp :: Property -> Maybe String
 findColorInProp (Property _ val) = case match (compile "#\\d{3,6}" []) (S.pack val) [] of
                        Just m -> Just (S.unpack $ head $ m)
                        Nothing -> Nothing
 
--- | Пороговое значение при котором создаются переменные. Если цветовое значение
--- встречалось меньшее кол-во раз, то для нее переменная не создается.
-colorLimit :: Int
-colorLimit = 3
+-- | Ищет одинаковые значения цветов и добавляеи их в результирующую
+-- выборку если они проходят ограничение
+filterColorsByLimit :: [String] -> Int -> [String]
+filterColorsByLimit colors limit = map (fst) (limitFilter colorCount)
+              where limitFilter = filter (\x -> snd x >= limit)
+                    colorCount = map (\x -> (head x, length x)) (group $ sort colors)
 
+-- | Уникализирует имена scss-переменных, путем добавления числового
+-- индекса к их имени
+numberingColors :: [String] -> [SC.Variable]
+numberingColors colors = map buildVariable (zip colors [0..])
+        where buildVariable (color, n) = SC.Variable ("color" ++ show n) color
 
 -- | Ищет одинаковые значения цветов и на основе этой информации формирует
 -- список scss-переменных
-makeVariables :: [Ruleset] -> [SC.Variable]
-makeVariables rulesets = buildVariables $ colorStat
-                         $ map (fromJust) (concat $ map (findColors) rulesets)
-    where findColors (Ruleset _ props) = filter (/= Nothing) (map (findColorInProp) props)
-          colorStat colors = filter (\x -> snd x >= colorLimit)
-              (map (\x -> (head x, length x)) (group $ sort colors))
-          buildVariables stat = map (\x -> variable (snd x) (fst x))
-              (zipWith (\x y -> (fst x, y)) stat [0 ..])
-          variable n val = SC.Variable ("color" ++ show n) val
+buildVariables :: [Ruleset] -> [SC.Variable]
+buildVariables rulesets = numberingColors $ filterColorsByLimit (foundColors) 3
+    where searchColors (Ruleset _ props) = filter (/= Nothing) (map (findColorInProp) props)
+          foundColors = map (fromJust) (concat $ map (searchColors) rulesets)
 
 -- | Проверяет, явялется ли первый селектор подселектором второго.
 -- Например: body li > a является подселектором body li. Особо следует

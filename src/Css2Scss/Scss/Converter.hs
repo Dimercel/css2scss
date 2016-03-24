@@ -139,9 +139,13 @@ buildRawExtends rulesets = convertRules (findExtend rulesets) : buildRawExtends 
               map (\y -> maxSubSequence (getProps x) (getProps y) ) xs
           limit e = if length e > 2 then e else []
 
+-- | Дополнительно обрабатывает "сырые" расширения. Гарантирует
+-- уникальность, а также сортировку от большего кол-ва css-свойств
+-- к меньшему.
 buildExtends :: [Ruleset] -> [SC.Extend]
 buildExtends rulesets = postProcess $ buildRawExtends rulesets
-    where postProcess x = numberingRules $ uniq $ notEmpty $ x
+    where postProcess x = reverse $ sortBy (comparing (length . SC.ruleProps)) $
+              numberingRules $ uniq $ notEmpty $ x
           uniq = nub
           notEmpty = filter (SC.isNotEmptyRule)
 
@@ -156,6 +160,11 @@ replaceExtend ext@(SC.Rule extName extProps) rule@(Ruleset ruleName props)
     | otherwise = Ruleset ruleName (map convert withExtend)
     where ruleProps = map convert props
           withExtend = (SC.Property "@extend" extName) : filter (`notElem` extProps) ruleProps
+
+replaceAllExtends :: [SC.Extend] -> [Ruleset] -> [Ruleset]
+replaceAllExtends [] rules = rules
+replaceAllExtends exts rules = replaceAllExtends (tail exts)
+    (map (\x -> replaceExtend (head exts) x) rules)
 
 -- | Возвращает максимальную, общую подпоследовательность в двух списках
 maxSubSequence :: (Eq a) => [a] -> [a] -> [a]

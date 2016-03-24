@@ -1,5 +1,6 @@
 module Css2Scss.Test.Css (run) where
 
+import Test.Hspec
 import Test.QuickCheck
 import Test.QuickCheck.Gen (unGen)
 import Test.QuickCheck.Random
@@ -7,7 +8,6 @@ import qualified Css2Scss.Css as C
 import Css2Scss.Test.Lexer (TokenId)
 import Css2Scss.Css.Lexer (Token(..), TokenId(..))
 import Control.Applicative
-import Control.Monad
 
 listWithToken:: Token -> Gen [Token]
 listWithToken t = do
@@ -31,6 +31,10 @@ prop_getTokAfter t = t `elem` withT
                   withOutT = unGen (listWithOutToken t) (mkQCGen 0) 0
 
 run :: IO ()
-run = do
-        quickCheck (prop_getTokBefore :: Token -> Property)
-        quickCheck (prop_getTokAfter :: Token -> Property)
+run = hspec $ do
+    describe "Test for Css functions" $ do
+        it "Test for getTokBefore" $ do
+            quickCheck (prop_getTokBefore :: Token -> Property)
+
+        it "Test for getTokAfter" $ do
+            quickCheck (prop_getTokAfter :: Token -> Property)

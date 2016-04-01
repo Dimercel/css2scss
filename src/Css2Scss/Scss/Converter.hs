@@ -91,7 +91,7 @@ buildVariables rulesets = numberingColors $ filterColorsByLimit (foundColors) 3
 isSubSelector :: Ruleset -> Ruleset -> Bool
 isSubSelector (Ruleset x _) (Ruleset y _)
         | x == y = False
-        | otherwise = y == take (length y) x
+        | otherwise = (isPrefixOf y x) && (isPrefixOf (y ++ " ") x)
 
 -- | Селекторы стилей должны принадлежать одной группе, если для них
 -- существует один общий подселектор. Сам этот подселектор, также должен

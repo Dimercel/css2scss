@@ -46,3 +46,8 @@ instance Renderer (Tree Rule) where
                     (concat $ map (renderWithIndent (level + 1)) rules),
                     indent level, "}", eol]
             where propsText = intercalate (eol) (map (renderWithIndent (level + 1)) props)
+
+instance Renderer Variable where
+        render (Variable name val) = concat ["$", name, ": ", val, ";"]
+
+        renderWithIndent level var = concat [indent level, render var]

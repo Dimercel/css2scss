@@ -1,6 +1,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 
-module Css2Scss.Scss.Render (Renderer(..)) where
+module Css2Scss.Scss.Render
+    ( Renderer(..)
+    , PrettyRenderer(..)
+    ) where
 
 
 import Data.List
@@ -19,19 +22,16 @@ indent level = replicate (indentSize * level) ' '
 
 class Renderer a where
         render :: a -> String
-        renderWithIndent :: Int -> a -> String
+
+class PrettyRenderer a where
+        renderPretty :: Int -> a -> String
 
 instance Renderer Property where
         render (Property name val) = name ++ " : " ++ val ++ ";"
-        renderWithIndent level prop = indent level ++ (render prop)
 
 instance Renderer Rule where
         render (Rule sel props) = sel ++ " {" ++ propsText ++ "}"
             where propsText = intercalate " " (map (render) props)
-
-        renderWithIndent level (Rule sel props) =
-            concat [indent level, sel, " {", eol, propsText, eol, indent level, "}", eol]
-            where propsText = intercalate (eol) (map (renderWithIndent (level+1)) props)
 
 instance Renderer (Tree Rule) where
         render (Node rule []) = render rule
@@ -39,10 +39,20 @@ instance Renderer (Tree Rule) where
             concat [sel, " {", propsText, (concat $ map (render) rules), " }"]
             where propsText = intercalate (" ") (map (render) props)
 
-        renderWithIndent level (Node rule []) = renderWithIndent level rule
-        renderWithIndent level (Node (Rule sel props) rules) =
+
+instance PrettyRenderer Property where
+        renderPretty level prop = indent level ++ (render prop)
+
+instance PrettyRenderer Rule where
+        renderPretty level (Rule sel props) =
+            concat [indent level, sel, " {", eol, propsText, eol, indent level, "}", eol]
+            where propsText = intercalate (eol) (map (renderPretty (level+1)) props)
+
+instance PrettyRenderer (Tree Rule) where
+        renderPretty level (Node rule []) = renderPretty level rule
+        renderPretty level (Node (Rule sel props) rules) =
             concat [eol, indent level, sel, " {",
                     eol, propsText, eol, eol,
-                    (concat $ map (renderWithIndent (level + 1)) rules),
+                    (concat $ map (renderPretty (level + 1)) rules),
                     indent level, "}", eol]
-            where propsText = intercalate (eol) (map (renderWithIndent (level + 1)) props)
+            where propsText = intercalate (eol) (map (renderPretty (level + 1)) props)

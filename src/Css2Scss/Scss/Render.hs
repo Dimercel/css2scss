@@ -39,6 +39,8 @@ instance Renderer (Tree Rule) where
             concat [sel, " {", propsText, (concat $ map (render) rules), " }"]
             where propsText = intercalate (" ") (map (render) props)
 
+instance Renderer Variable where
+        render (Variable name val) = concat ["$", name, ": ", val, ";"]
 
 instance PrettyRenderer Property where
         renderPretty level prop = indent level ++ (render prop)
@@ -56,3 +58,6 @@ instance PrettyRenderer (Tree Rule) where
                     (concat $ map (renderPretty (level + 1)) rules),
                     indent level, "}", eol]
             where propsText = intercalate (eol) (map (renderPretty (level + 1)) props)
+
+instance PrettyRenderer Variable where
+        renderPretty level var = concat [indent level, render var]

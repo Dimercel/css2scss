@@ -117,7 +117,20 @@ buildSCSSRuleset rules
 
 -- | Группирует стили и строит на их основе древовидную структуру SCSS стилей
 buildSCSSRulesets :: [Ruleset] -> [SC.Ruleset]
-buildSCSSRulesets ruleset = map (buildSCSSRuleset) (groupSelectors ruleset)
+buildSCSSRulesets ruleset = map (normalizeSelectors . buildSCSSRuleset)
+        (groupSelectors ruleset)
+
+normalizeSelectors :: SC.Ruleset -> SC.Ruleset
+normalizeSelectors leaf@(Node _ []) = leaf
+normalizeSelectors (Node rule childRules) =
+        Node rule (map normalizeSelectors withoutPrefix)
+        where withoutPrefix = map (\(Node r c) -> (Node (cleanRule r) c)) childRules
+              cleanRule x = SC.Rule
+                  (cutPrefix (SC.selector rule) (SC.selector x))
+                  (SC.ruleProps x)
+              cutPrefix x y = case stripPrefix x y of
+                                  Just res -> res
+                                  Nothing -> y
 
 getProps :: Ruleset -> [Property]
 getProps (Ruleset _ props) = props

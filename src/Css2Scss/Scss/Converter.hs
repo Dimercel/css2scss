@@ -35,6 +35,8 @@ import Data.Maybe
 import Data.List
 import Data.Ord
 import Data.Tree
+import Data.Char (isSpace)
+import Control.Applicative
 
 import Css2Scss.Css
 import qualified Css2Scss.Scss as SC
@@ -56,6 +58,10 @@ instance Convertable Ruleset SC.Rule where
 instance Convertable SC.Rule Ruleset where
         convert (SC.Rule selector props) = Ruleset selector (map convert props)
 
+-- | Обрезает пробельные символы в начале и конце строки
+trim :: String -> String
+trim = f . f
+   where f = reverse . dropWhile isSpace
 
 -- | Отыскивает цветовое значение в css-свойстве и возвращает его в виде
 -- строки
@@ -93,11 +99,15 @@ isSubSelector (Ruleset x _) (Ruleset y _)
         | x == y = False
         | otherwise = (isPrefixOf y x) && (isPrefixOf (y ++ " ") x)
 
+-- | TODO: Требуется учитывать тот случай, когда селектор является составным.
+-- Нужно рассматривать каждую его часть отдельно или перегруппировывать.
+
 -- | Селекторы стилей должны принадлежать одной группе, если для них
 -- существует один общий подселектор. Сам этот подселектор, также должен
 -- входить в группу.
 isOneGroup :: Ruleset -> Ruleset -> Bool
 isOneGroup first@(Ruleset x _) second@(Ruleset y _)
+        | ',' `elem` (concat [x, y]) = False
         | length x > length y = isSubSelector first second
         | otherwise = isSubSelector second first
 
@@ -120,17 +130,31 @@ buildSCSSRulesets :: [Ruleset] -> [SC.Ruleset]
 buildSCSSRulesets ruleset = map (normalizeSelectors . buildSCSSRuleset)
         (groupSelectors ruleset)
 
+-- | При конвертации из css-стилей в scss-селекторы, начальная часть имен
+-- селекторов может дублироваться, т.к. css не поддерживает древовидные
+-- структуры. Данная функция устраняет такое дублирование, тем самым строя
+-- верную сьруктуру дерева.
 normalizeSelectors :: SC.Ruleset -> SC.Ruleset
 normalizeSelectors leaf@(Node _ []) = leaf
 normalizeSelectors (Node rule childRules) =
-        Node rule (map normalizeSelectors withoutPrefix)
-        where withoutPrefix = map (\(Node r c) -> (Node (cleanRule r) c)) childRules
-              cleanRule x = SC.Rule
-                  (cutPrefix (SC.selector rule) (SC.selector x))
+        Node rule (map normalizeSelectors normChilds)
+        where normChilds = map
+                  (\(Node r c) -> (Node (normSelector r) c)) childRules
+              normSelector x = SC.Rule
+                  (childSelector (SC.selector rule) (SC.selector x))
                   (SC.ruleProps x)
-              cutPrefix x y = case stripPrefix x y of
-                                  Just res -> res
-                                  Nothing -> y
+
+-- | Возвращает корректное имя scss-селектора. Убирает из дочернего селектора
+-- имя родительского. Если одинаковых частей в селекторах нет, то
+-- возвращается дочернее имя селектора без каких-либо изменений. Функция не
+-- работает с группой селекторов (когда имена указаны через ',')
+childSelector :: String -> String -> String
+childSelector parent child
+    | ',' `elem` (concat [parent, child]) = child
+    | otherwise = case head <$> prefix of
+                      Just ' ' -> trim $ fromJust prefix
+                      _   -> child
+        where prefix = stripPrefix parent child
 
 getProps :: Ruleset -> [Property]
 getProps (Ruleset _ props) = props

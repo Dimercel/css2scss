@@ -37,9 +37,13 @@ import Data.Ord
 import Data.Tree
 import Data.Char (isSpace)
 import Control.Applicative
+import Control.Category ((.), id)
+import Data.Label
+import Prelude hiding ((.), id)
 
 import Css2Scss.Css
 import qualified Css2Scss.Scss as SC
+
 
 type GroupingStyles = [Ruleset]
 
@@ -58,6 +62,7 @@ instance Convertable Ruleset SC.Rule where
 instance Convertable SC.Rule Ruleset where
         convert (SC.Rule selector props) = Ruleset selector (map convert props)
 
+
 -- | Обрезает пробельные символы в начале и конце строки
 trim :: String -> String
 trim = f . f
@@ -66,9 +71,11 @@ trim = f . f
 -- | Отыскивает цветовое значение в css-свойстве и возвращает его в виде
 -- строки
 findColorInProp :: Property -> Maybe String
-findColorInProp (Property _ val) = case match (compile "#\\d{3,6}" []) (S.pack val) [] of
-                       Just m -> Just (S.unpack $ head $ m)
-                       Nothing -> Nothing
+findColorInProp prop =
+    let colorVal = match (compile "#\\d{3,6}" []) (S.pack $ get value prop) []
+    in case colorVal of
+           Just m -> Just (S.unpack $ head $ m)
+           Nothing -> Nothing
 
 -- | Ищет одинаковые значения цветов и добавляеи их в результирующую
 -- выборку если они проходят ограничение
@@ -133,7 +140,7 @@ buildSCSSRulesets ruleset = map (normalizeSelectors . buildSCSSRuleset)
 -- | При конвертации из css-стилей в scss-селекторы, начальная часть имен
 -- селекторов может дублироваться, т.к. css не поддерживает древовидные
 -- структуры. Данная функция устраняет такое дублирование, тем самым строя
--- верную сьруктуру дерева.
+-- верную структуру дерева.
 normalizeSelectors :: SC.Ruleset -> SC.Ruleset
 normalizeSelectors leaf@(Node _ []) = leaf
 normalizeSelectors (Node rule childRules) =

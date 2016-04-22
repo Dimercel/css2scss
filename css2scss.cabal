@@ -29,6 +29,7 @@ library
                      , bytestring
                      , containers
                      , split
+                     , fclabels
   default-language:    Haskell2010
 
 executable css2scss-exe
@@ -44,6 +45,7 @@ executable css2scss-exe
                      , containers
                      , containers
                      , split
+                     , fclabels
   default-language:    Haskell2010
 
 test-suite css2scss-test

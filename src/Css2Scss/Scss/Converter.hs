@@ -86,14 +86,15 @@ filterColorsByLimit colors limit = map (fst) (limitFilter colorCount)
 
 -- | Уникализирует имена scss-переменных, путем добавления числового
 -- индекса к их имени
-numberingColors :: [String] -> [SC.Variable]
-numberingColors colors = map buildVariable (zip colors [0..])
+numberingColors :: Int -> [String] -> [SC.Variable]
+numberingColors start_inx colors = map buildVariable (zip colors [start_inx ..])
         where buildVariable (color, n) = SC.Variable ("color" ++ show n) color
 
 -- | Ищет одинаковые значения цветов и на основе этой информации формирует
 -- список scss-переменных
-buildVariables :: [Ruleset] -> [SC.Variable]
-buildVariables rulesets = numberingColors $ filterColorsByLimit (foundColors) 3
+buildVariables :: Int -> [Ruleset] -> [SC.Variable]
+buildVariables start_inx rulesets = numberingColors start_inx $
+    filterColorsByLimit (foundColors) 3
     where searchColors (Ruleset _ props) = filter (/= Nothing) (map (findColorInProp) props)
           foundColors = map (fromJust) (concat $ map (searchColors) rulesets)
 
@@ -168,12 +169,12 @@ getProps (Ruleset _ props) = props
 
 -- | Уникализирует имена расширений по средствам добавления к имени 
 -- числового индекса
-numberingRules :: [SC.Extend] -> [SC.Extend]
-numberingRules x = map (addNum) (zip x [0 ..])
+numberingRules :: Int -> [SC.Extend] -> [SC.Extend]
+numberingRules start_inx x = map (addNum) (zip x [start_inx ..])
         where addNum ((SC.Rule name p), n) = SC.Rule (name ++ (show n)) p 
 
--- | Находиит и собирает в единый список все расшинения по переданному
--- набору CSS правил
+-- | Находиит и собирает в единый список все SCSS-расшинения(extend) по
+-- переданному набору CSS правил
 buildRawExtends :: [Ruleset] -> [SC.Extend]
 buildRawExtends [] = []
 buildRawExtends rulesets = convertRules (findExtend rulesets) : buildRawExtends (tail rulesets)
@@ -186,10 +187,10 @@ buildRawExtends rulesets = convertRules (findExtend rulesets) : buildRawExtends 
 -- | Дополнительно обрабатывает "сырые" расширения. Гарантирует
 -- уникальность, а также сортировку от большего кол-ва css-свойств
 -- к меньшему.
-buildExtends :: [Ruleset] -> [SC.Extend]
-buildExtends rulesets = postProcess $ buildRawExtends rulesets
+buildExtends :: Int -> [Ruleset] -> [SC.Extend]
+buildExtends start_inx rulesets = postProcess $ buildRawExtends rulesets
     where postProcess x = reverse $ sortBy (comparing (length . (get SC.props))) $
-              numberingRules $ uniq $ notEmpty $ x
+              numberingRules start_inx $ uniq $ notEmpty $ x
           uniq = nub
           notEmpty = filter (SC.isNotEmptyRule)
 

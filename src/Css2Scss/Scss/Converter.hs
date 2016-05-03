@@ -148,8 +148,8 @@ normalizeSelectors (Node rule childRules) =
         where normChilds = map
                   (\(Node r c) -> (Node (normSelector r) c)) childRules
               normSelector x = SC.Rule
-                  (childSelector (SC.selector rule) (SC.selector x))
-                  (SC.ruleProps x)
+                  (childSelector (get SC.selector rule) (get SC.selector x))
+                  (get SC.props x)
 
 -- | Возвращает корректное имя scss-селектора. Убирает из дочернего селектора
 -- имя родительского. Если одинаковых частей в селекторах нет, то
@@ -188,7 +188,7 @@ buildRawExtends rulesets = convertRules (findExtend rulesets) : buildRawExtends 
 -- к меньшему.
 buildExtends :: [Ruleset] -> [SC.Extend]
 buildExtends rulesets = postProcess $ buildRawExtends rulesets
-    where postProcess x = reverse $ sortBy (comparing (length . SC.ruleProps)) $
+    where postProcess x = reverse $ sortBy (comparing (length . (get SC.props))) $
               numberingRules $ uniq $ notEmpty $ x
           uniq = nub
           notEmpty = filter (SC.isNotEmptyRule)

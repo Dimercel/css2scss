@@ -1,24 +1,13 @@
 module Css2Scss.Test.Scss (run) where
 
+import Data.Label
 import Test.QuickCheck
 import Test.Hspec
 import qualified Css2Scss.Scss as S
 
-instance Arbitrary S.Property where
-        arbitrary = do
-            name <- arbitrary
-            val <- arbitrary
-            return $ S.Property name val
+prop_isEmptyRule rule = (length (get S.props rule) /= 0) ==> not $ S.isEmptyRule rule
 
-instance Arbitrary S.Rule where
-        arbitrary = do
-            selector <- arbitrary
-            props <- arbitrary
-            return $ S.Rule selector props
-
-prop_isEmptyRule rule@(S.Rule sel props) = (length props /= 0) ==> not $ S.isEmptyRule rule
-
-prop_isNotEmptyRule rule@(S.Rule sel props) = (length props /= 0) ==> S.isNotEmptyRule rule
+prop_isNotEmptyRule rule = (length (get S.props rule) /= 0) ==> S.isNotEmptyRule rule
 
 run :: IO ()
 run = hspec $ do

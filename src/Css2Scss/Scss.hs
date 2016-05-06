@@ -3,10 +3,10 @@
 module Css2Scss.Scss
     ( Property(..)
     , Rule(..)
-    , Ruleset(..)
+    , Ruleset
     , Variable(..)
     , Mixin(..)
-    , Extend(..)
+    , Extend
     , name
     , value
     , selector
@@ -21,9 +21,8 @@ module Css2Scss.Scss
     ) where
 
 import Data.Tree
-import Control.Category ((.), id)
 import Data.Label
-import Prelude hiding ((.), id)
+import Test.QuickCheck (Arbitrary(..), arbitrary)
 
 
 data Property = Property { _name
@@ -48,6 +47,18 @@ data Mixin    = Mixin { _mix_name  :: String
 type Extend   = Rule
 
 mkLabels [''Property, ''Rule, ''Variable, ''Mixin]
+
+instance Arbitrary Property where
+        arbitrary = do
+            name <- arbitrary
+            val <- arbitrary
+            return $ Property name val
+
+instance Arbitrary Rule where
+        arbitrary = do
+            selector <- arbitrary
+            props <- arbitrary
+            return $ Rule selector props
 
 isEmptyRule :: Rule -> Bool
 isEmptyRule (Rule _ []) = True

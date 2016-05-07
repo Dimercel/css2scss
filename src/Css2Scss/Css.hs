@@ -67,7 +67,9 @@ clearTokensData :: [Token] -> String
 clearTokensData tokens = getTokensData $ chomp tokens
 
 getTokBefore :: Token -> [Token] -> [Token]
-getTokBefore sep tokens = fst $ span (/= sep) tokens
+getTokBefore sep tokens
+  | sep `elem` tokens = fst $ span (/= sep) tokens
+  | otherwise = []
 
 getTokAfter :: Token -> [Token] -> [Token]
 getTokAfter sep tokens = case snd $ span (/= sep) tokens of

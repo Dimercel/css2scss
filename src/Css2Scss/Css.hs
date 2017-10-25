@@ -1,46 +1,44 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Css2Scss.Css
-    ( Property(..)
-    , Ruleset(..)
+    ( Rule(..)
     , Media(..)
     , Definition(..)
-    , buildDefinitions
-    , buildRulesets
-    , buildMedias
-    , chainRuleset
-    , getTokBefore
-    , getTokAfter
-    , name
-    , value
-    , selector
-    , props
-    , mediaSel
-    , rules
-    , defName
-    , defValue
+    , Ruleset
+    , PropertySet
+    , SelectorT
+    , makeRule
+    , isCompositeRule
+    , toSimpleRule
+    , isChildRule
+    , isDirectChildRule
+    , isParentRule
+    , isFamilyRules
     ) where
 
-import Data.List
-import Data.List.Split
-import Control.Category ((.), id)
+
+import Data.List (isPrefixOf)
+import Data.HashMap (Map(..))
+import Data.List.Utils (replace)
+import Data.String.Utils (strip)
 import Data.Label
-import Prelude hiding ((.), id)
+
+import Css2Scss.Utils (eol)
 
 
-import Css2Scss.Css.Lexer ( Token
-                          , TokenId(Static)
-                          , getTokensData
-                          , chomp)
+type PropertySet = Map String String
 
+-- Селектор состоит из групп, каждая из которых
+-- в свою очередь, состоит из уровней.
+-- Например: .item1 .item2, .item3 .item4 будет
+-- представлен так: [[".item1", ".item2"], [".item3", ".item4"]]
+type CompSelector = [[String]]
+type SelectorT = [String]
+type Ruleset = [Rule]
 
-data Property = Property { _name
-                         , _value :: String
-                         } deriving (Eq, Show)
-
-data Ruleset = Ruleset { _selector :: String
-                       , _props :: [Property]
-                       } deriving (Eq, Show)
+data Rule = Rule { _selector :: CompSelector
+                 , _props :: PropertySet
+                 } deriving (Show, Eq)
 
 data Media = Media { _mediaSel :: String
                    , _rules :: [Ruleset]
@@ -50,61 +48,73 @@ data Definition = Definition { _defName
                              , _defValue :: String
                              } deriving (Eq, Show)
 
-mkLabels [''Property, ''Ruleset, ''Media, ''Definition]
+mkLabels [''Rule, ''Media, ''Definition]
 
-instance Ord Ruleset where
-        compare (Ruleset x _) (Ruleset y _) = compare x y
 
-buildDefinition :: (String, [Token]) -> Definition
-buildDefinition (id, tokens) = Definition id (getTokensData $ chomp tokens)
+-- Основной конструктор css-правил. Селектор правила
+-- всегда должен находиться в нормальной форме.
+makeRule :: CompSelector -> PropertySet -> Rule
+makeRule sel = Rule (selectorNF sel)
 
-buildDefinitions :: [(String, [Token])] -> [Definition]
-buildDefinitions [] = []
-buildDefinitions x = map (buildDefinition) (filter (isDef) x)
-    where isDef d = fst d `elem` ["charset", "import", "namespace", "page", "font-face"]
+-- Приводит селектор в нормальную форму.
+-- Правила:
+-- - никакая часть селектора не содержит переводов строк
+-- - уровни селектора не содержат начальных или конечных пробелов
+selectorNF :: CompSelector -> CompSelector
+selectorNF = map (map (strip . replace eol ""))
 
-clearTokensData :: [Token] -> String
-clearTokensData tokens = getTokensData $ chomp tokens
+-- Является ли селектор составным?
+-- Если в селекторе присутствует запятая,
+-- то он считается составным
+isCompositeSelector :: CompSelector -> Bool
+isCompositeSelector sel = length sel > 1
 
-getTokBefore :: Token -> [Token] -> [Token]
-getTokBefore sep tokens
-  | sep `elem` tokens = fst $ span (/= sep) tokens
-  | otherwise = []
+isCompositeRule :: Rule -> Bool
+isCompositeRule = isCompositeSelector . get selector
 
-getTokAfter :: Token -> [Token] -> [Token]
-getTokAfter sep tokens = case snd $ span (/= sep) tokens of
-                                  [] -> []
-                                  x -> tail x
+-- Конвертирует составное правило в список не составных.
+-- Все свойства при этом дублируются.
+toSimpleRule :: Rule -> Ruleset
+toSimpleRule rule = let properties = get props rule
+  in map (\x -> Rule [x] properties ) (get selector rule)
 
-buildProperty :: [Token] -> Property
-buildProperty t = Property (identifier t) (value t)
-    where identifier x = clearTokensData $ getTokBefore (Static, ":") x
-          value x = identifier (reverse x)
+-- Является ли первый селектор дочерним, относительно второго?
+-- Например: селектор ".item1 .item2 .item3" является дочерним
+-- относительно ".item1". Имеются в виду не только прямые потомки.
+isChildSelector :: SelectorT -> SelectorT -> Bool
+isChildSelector child parent = parent `isPrefixOf` child && parent /= child
 
-buildRuleset :: [Token] -> Ruleset
-buildRuleset x = Ruleset selector properties
-    where selector = filter (/= '\n') $ clearTokensData $ getTokBefore (Static, "{") x
-          properties = map (buildProperty) (endBy [(Static, ";")] (getPropTokens x))
-          getPropTokens t = chomp $ init $ getTokAfter (Static, "{") t
+isChildRule :: Rule -> Rule -> Bool
+isChildRule child parent =
+  isChildSelector (head $ get selector child) (head $ get selector parent)
 
-buildRulesets :: [(String, [Token])] -> [Ruleset]
-buildRulesets [] = []
-buildRulesets x = map (buildRuleset . snd) (filter (isRuleset) x)
-    where isRuleset r = fst r == "ruleset"
+-- Является ли первый селектор прямым потомком второго?
+-- Например: ".item1 .item2" является прямым потомком ".item1",
+-- а ".item1 .item2_2 .item3" не является относительно ".item1 .item2"
+isDirectChildSelector :: SelectorT -> SelectorT -> Bool
+isDirectChildSelector child parent =
+  length child == length parent + 1 && parent == init child
 
-chainRuleset :: [Token] -> [[Token]]
-chainRuleset x
-        | (Static, "}") `notElem` x = []
-        | otherwise = let (ruleset, other) = span (/= (Static, "}")) x
-                          in (concat [ruleset, [(Static, "}")]]) : chainRuleset (tail other)
+isDirectChildRule :: Rule -> Rule -> Bool
+isDirectChildRule child parent =
+  isDirectChildSelector (head $ get selector child) (head $ get selector parent)
 
-buildMedia :: [Token] -> Media
-buildMedia x = Media mediaHead rulesets
-    where mediaHead = clearTokensData $ getTokBefore (Static, "{") x
-          rulesets = map (buildRuleset) (chainRuleset body)
-          body = chomp $ init $ getTokAfter (Static, "{") x
+-- Является ли первый селектор родительским, относительно второго?
+isParentSelector :: SelectorT -> SelectorT -> Bool
+isParentSelector parent child = isChildSelector child parent
 
-buildMedias :: [(String, [Token])] -> [Media]
-buildMedias [] = []
-buildMedias x = map (buildMedia . snd) (filter (isMedia) x)
-    where isMedia m = fst m == "media"
+
+isParentRule :: Rule -> Rule -> Bool
+isParentRule parent child =
+  isParentSelector (head $ get selector parent) (head $ get selector child)
+
+-- Принадлежат ли селекторы одной и той же семье?
+-- Если селекторы "растут" из одного корня, то они родственники.
+-- Например: ".item1", ".item1 .item2", ".item1 .item3" - являются
+-- родственными.
+isFamilySelectors :: SelectorT -> SelectorT -> Bool
+isFamilySelectors x y = head x == head y
+
+isFamilyRules :: Rule -> Rule -> Bool
+isFamilyRules x y =
+  isFamilySelectors (head $ get selector x) (head $ get selector y)

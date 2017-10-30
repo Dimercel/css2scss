@@ -4,9 +4,12 @@ module Css2Scss.Css
     ( Rule(..)
     , Media(..)
     , Definition(..)
+    , DefinitionT(..)
+    , CssItem (..)
     , Ruleset
     , PropertySet
     , SelectorT
+    , CompSelector
     , makeRule
     , isCompositeRule
     , toSimpleRule
@@ -18,7 +21,8 @@ module Css2Scss.Css
 
 
 import Data.List (isPrefixOf)
-import Data.HashMap (Map(..))
+import Data.HashMap ( Map(..)
+                    , fromList)
 import Data.List.Utils (replace)
 import Data.String.Utils (strip)
 import Data.Label
@@ -41,20 +45,26 @@ data Rule = Rule { _selector :: CompSelector
                  } deriving (Show, Eq)
 
 data Media = Media { _mediaSel :: String
-                   , _rules :: [Ruleset]
+                   , _rules :: Ruleset
                    } deriving (Eq, Show)
 
-data Definition = Definition { _defName
+data DefinitionT = Import | Page | FontFace | Charset | Namespace
+                   deriving (Show, Eq)
+
+data Definition = Definition { _defName :: DefinitionT
                              , _defValue :: String
                              } deriving (Eq, Show)
+
+data CssItem = RuleItem Rule | MediaItem Media | DefItem Definition
+               deriving (Show, Eq)
 
 mkLabels [''Rule, ''Media, ''Definition]
 
 
 -- Основной конструктор css-правил. Селектор правила
 -- всегда должен находиться в нормальной форме.
-makeRule :: CompSelector -> PropertySet -> Rule
-makeRule sel = Rule (selectorNF sel)
+makeRule :: CompSelector -> [(String, String)] -> Rule
+makeRule sel = Rule (selectorNF sel) . fromList
 
 -- Приводит селектор в нормальную форму.
 -- Правила:

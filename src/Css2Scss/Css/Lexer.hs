@@ -2,7 +2,7 @@ module Css2Scss.Css.Lexer
     ( Token (..)
     , TokenId(..)
     , splitOnBaseLexems
-    , getTokensData
+    , tokensData
     , chomp
     , h
     , nonascii
@@ -117,8 +117,8 @@ data TokenId = S
 type Token = (TokenId, String)
 
 
-getTokensData :: [Token] -> String
-getTokensData = concatMap snd
+tokensData :: [Token] -> String
+tokensData = concatMap snd
 
 -- | Обрезает токены пробельных символов в начале
 -- и конце списка

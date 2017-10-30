@@ -11,6 +11,7 @@ module Css2Scss.Css.Parser
     , media
     , medium
     , page
+
     , pseudo_page
     , font_face
     , operator
@@ -41,7 +42,17 @@ module Css2Scss.Css.Parser
 
 import Text.ParserCombinators.Parsec
 import Text.Regex.PCRE.Heavy (gsub, re)
+import Data.String.Utils (strip)
+
 import Css2Scss.Css.Lexer as L
+import Css2Scss.Css ( Rule(..)
+                    , Media(..)
+                    , Definition(..)
+                    , DefinitionT(..)
+                    , CssItem (..)
+                    , SelectorT
+                    , CompSelector
+                    , makeRule)
 
 
 -- Вырезает комментарии из входного потока.
@@ -52,82 +63,94 @@ ignoreComments :: String -> String
 ignoreComments =
         gsub [re|\/\*[^*]*\*+([^/*][^*]*\*+)*\/|] (" " :: String)
 
+decl2String :: (String, String) -> String
+decl2String (x, y) = x ++ y
 
-stylesheet :: Parser [[L.Token]]
-stylesheet = concat <$> sequence [
-        count 1 (option [] $ do
-          res <- sequence [
-            try $ count 1 L._CHARSET_SYM,
-            many L._S,
-            count 1 L._STRING,
-            many L._S,
-            count 1 (L._STATIC ";")]
-          return $ concat res),
-        count 1 (many $ L._S
-                        <|> L._CDO
-                        <|> L._CDC),
-        many $ do
-          i <- try _import
-          s <- many $ L._S
-                      <|> L._CDO
-                      <|> L._CDC
-          return $ i ++ s,
-        many $ do
-          i <- try namespace
-          s <- many $ L._S
-                      <|> L._CDO
-                      <|> L._CDC
-          return $ i ++ s,
-        many $ do
-          res <- sequence [
-            ruleset
-            <|> try media
-            <|> try page
-            <|> try font_face,
-            many $ L._S
-                    <|> L._CDO
-                    <|> L._CDC]
-          return $ concat res]
 
-_import :: Parser [L.Token]
+stylesheet :: Parser [CssItem]
+stylesheet = do
+  ch <- option [] $ do
+      try L._CHARSET_SYM
+      many L._S
+      s <- L._STRING
+      many L._S
+      L._STATIC ";"
+      return [s, (Static, ";")]
+
+  many $ L._S
+         <|> L._CDO
+         <|> L._CDC
+
+  imp <- many $ do
+           i <- try _import
+           many $ L._S
+                  <|> L._CDO
+                  <|> L._CDC
+           return i
+
+  ns <- many $ do
+          n <- try namespace
+          many $ L._S
+                <|> L._CDO
+                <|> L._CDC
+          return n
+
+  css <- many $ do
+    x <- (RuleItem <$> ruleset)
+         <|> try (MediaItem <$> media)
+         <|> try (DefItem <$> page)
+         <|> try (DefItem <$> font_face)
+    many $ L._S
+           <|> L._CDO
+           <|> L._CDC
+    return x
+
+  return $ concat [
+      if null ch then [] else [DefItem (Definition Charset (tokensData ch))],
+      if null imp then [] else map DefItem imp,
+      if null ns then [] else map DefItem ns,
+      css]
+
+_import :: Parser Definition
 _import =
-  concat <$> sequence [
-    count 1 L._IMPORT_SYM,
-    many L._S,
-    count 1 L._STRING
-    <|> count 1 L._URI,
-    many L._S,
-    option [] $ do
-      m <- medium
-      res <- many $ sequence[
-        count 1 (L._STATIC ","),
+  do
+    count 1 L._IMPORT_SYM
+    many L._S
+    res <-
+      concat <$> sequence [
+        count 1 L._STRING
+        <|> count 1 L._URI,
         many L._S,
-        medium]
-      return $ m ++ concat (concat res),
-    count 1 (L._STATIC ";"),
-    many L._S]
+        option [] $ do
+          m <- medium
+          res <- many $ sequence[
+            count 1 (L._STATIC ","),
+            many L._S,
+            medium]
+          return $ m ++ concat (concat res),
+        count 1 (L._STATIC ";"),
+        many L._S]
+    return $ Definition Import (strip $ tokensData res)
 
-selectors_group :: Parser [L.Token]
+selectors_group :: Parser CompSelector
 selectors_group = do
         s <- selector
-        ms <- many $
-                concat <$> sequence [
-                    count 1 L._COMMA,
-                    many L._S,
-                    selector]
-        return $ s ++ concat ms
+        ms <- many $ do
+                count 1 L._COMMA
+                many L._S
+                selector
+        return $ s : ms
 
-simple_selector_sequence :: Parser [L.Token]
+simple_selector_sequence :: Parser String
 simple_selector_sequence =
-  concat <$> sequence [
+  tokensData <$> concat <$> sequence [
     option [] (try universal
-      <|> type_selector),
+              <|> type_selector),
     concat <$> many (count 1 L._HASH
                      <|> _class
                      <|> try negation
                      <|> pseudo
                      <|> attrib)]
-
 
 type_selector :: Parser [L.Token]
 type_selector =
@@ -140,23 +163,26 @@ type_selector =
           e <- element_name
           return $ n ++ e
 
-namespace :: Parser [L.Token]
+namespace :: Parser Definition
 namespace =
-  concat <$> sequence [
-    count 1 L._NAMESPACE_SYM,
-    many L._S,
-    try $ count 1 L._URI
-    <|> concat <$> sequence [
-          option [] $
-            concat <$> sequence [
-                namespace_prefix,
-                many1 L._S],
-          count 1 $
-            L._URI
-            <|> L._STRING],
-    many L._S,
-    count 1 (L._STATIC ";"),
-    many L._S]
+  do
+    count 1 L._NAMESPACE_SYM
+    many L._S
+    res <-
+      concat <$> sequence [
+        try $ count 1 L._URI
+        <|> concat <$> sequence [
+              option [] $
+                concat <$> sequence [
+                    namespace_prefix,
+                    many1 L._S],
+              count 1 $
+                L._URI
+                <|> L._STRING],
+        many L._S,
+        count 1 (L._STATIC ";"),
+        many L._S]
+    return $ Definition Namespace (strip $ tokensData res)
 
 namespace_prefix :: Parser [L.Token]
 namespace_prefix =
@@ -165,24 +191,24 @@ namespace_prefix =
                <|> count 1 L._IDENT),
     option [] (count 1 (L._STATIC "|"))]
 
-media :: Parser [L.Token]
-media =
-  concat <$> sequence [
-    count 1 L._MEDIA_SYM,
-    many L._S,
-    medium,
-    concat <$> many (do
-        res <- sequence [
-            count 1 (L._STATIC ",")
-            <|> count 1 (L._STATIC "and"),
-            many L._S,
-            medium]
-        return $ concat res),
-    count 1 (L._STATIC "{"),
-    many L._S,
-    concat <$> many ruleset,
-    count 1 (L._STATIC "}"),
-    many L._S]
+media :: Parser Media
+media = do
+  count 1 L._MEDIA_SYM
+  many L._S
+  m <- medium
+  s <- concat <$> many (do
+      res <- sequence [
+          count 1 L._COMMA
+          <|> count 1 (L._STATIC "and"),
+          many L._S,
+          medium]
+      return $ concat res)
+  count 1 (L._STATIC "{")
+  many L._S
+  rules <- many ruleset
+  count 1 (L._STATIC "}")
+  many L._S
+  return $ Media (tokensData m ++ tokensData s) rules
 
 medium :: Parser [L.Token]
 medium = concat <$> sequence [
@@ -190,43 +216,59 @@ medium = concat <$> sequence [
         <|> count 1 L._IDENT,
         many L._S]
 
-page :: Parser [L.Token]
-page = concat <$> sequence [
-        count 1 L._PAGE_SYM,
-        many L._S,
+page :: Parser Definition
+page =
+  do
+    count 1 L._PAGE_SYM
+    many L._S
+    res <-
+      concat <$> sequence [
         option [] (count 1 L._IDENT),
         option [] pseudo_page,
         many L._S,
         count 1 (L._STATIC "{"),
         many L._S,
-        declaration,
+        (do
+           d <- declaration
+           return [(L.Static, decl2String d)]),
         concat <$> many (do
             res <- sequence [
                 count 1 (L._STATIC ";"),
                 many L._S,
-                declaration]
+                (do
+                    d <- declaration
+                    return [(L.Static, decl2String d)])]
             return $ concat res),
         count 1 (L._STATIC "}"),
         many L._S]
+    return $ Definition Page (strip $ tokensData res)
 
 pseudo_page :: Parser [L.Token]
 pseudo_page = (:) <$> L._STATIC ":" <*> count 1 L._IDENT
 
-font_face :: Parser [L.Token]
-font_face = concat <$> sequence [
-        count 1 L._FONT_FACE_SYM,
-        many L._S,
-        count 1 (L._STATIC "{"),
-        many L._S,
-        declaration,
-        concat <$> many (do
-            res <- sequence [
-                count 1 (L._STATIC ";"),
-                many L._S,
-                declaration]
-            return $ concat res),
-        count 1 (L._STATIC "}"),
-        many L._S]
+font_face :: Parser Definition
+font_face =
+  do
+    count 1 L._FONT_FACE_SYM
+    many L._S
+    res <-
+      concat <$> sequence [
+          count 1 (L._STATIC "{"),
+          many L._S,
+          (do
+            d <- declaration
+            return [(L.Static, decl2String d)]),
+          concat <$> many (do
+              res <- sequence [
+                  count 1 (L._STATIC ";"),
+                  many L._S,
+                  (do
+                    d <- declaration
+                    return [(L.Static, decl2String d)])]
+              return $ concat res),
+          count 1 (L._STATIC "}"),
+          many L._S]
+    return $ Definition FontFace (strip $ tokensData res)
 
 operator :: Parser [L.Token]
 operator =
@@ -258,29 +300,31 @@ unary_operator = do
 property :: Parser [L.Token]
 property = (:) <$> L._IDENT <*> many L._S
 
-ruleset :: Parser [L.Token]
-ruleset = concat <$> sequence [
-            selectors_group,
-            count 1 (L._STATIC "{"),
-            many L._S,
-            declaration,
-            concat <$> many
-                (concat <$> sequence [
-                    count 1 (L._STATIC ";"),
-                    many L._S,
-                    declaration]),
-            count 1 (L._STATIC "}"),
-            many L._S]
+ruleset :: Parser Rule
+ruleset = do
+  g <- selectors_group
+  count 1 (L._STATIC "{")
+  many L._S
+  d <- declaration
+  ds <- many $
+    do
+      count 1 (L._STATIC ";")
+      many L._S
+      d <- declaration
+      return d
+  count 1 (L._STATIC "}")
+  many L._S
+  return $ makeRule g (d : ds)
 
-selector :: Parser [L.Token]
-selector =
-  concat <$> sequence [
-    simple_selector_sequence,
-    concat <$> many
-                (do
-                   c <- combinator
-                   s <- simple_selector_sequence
-                   return $ c ++ s)]
+selector :: Parser SelectorT
+selector = do
+  x <- simple_selector_sequence
+  xs <- many
+    (do
+        c <- combinator
+        s <- simple_selector_sequence
+        return $ (L.tokensData c) ++ s)
+  return $ x : xs
 
 universal :: Parser [L.Token]
 universal =
@@ -327,17 +371,18 @@ pseudo =
     <|> count 1 L._IDENT]
 
 
-declaration :: Parser [L.Token]
+declaration :: Parser (String, String)
 declaration =
   do
-    res <- sequence [
-      property,
-      count 1 (L._STATIC ":"),
-      many L._S,
-      expr]
+    x <- do
+      p <- property
+      count 1 (L._STATIC ":")
+      many L._S
+      e <- expr
+      return $ (tokensData p, tokensData e)
     pr <- option [] prio
-    return $ concat res ++ pr
-  <|> return []
+    return $ (fst x, (snd x) ++ (tokensData pr))
+  <|> return ("", "")
 
 prio :: Parser [L.Token]
 prio =  (:) <$> L._IMPORTANT_SYM <*> many L._S

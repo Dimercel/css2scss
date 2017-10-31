@@ -106,7 +106,7 @@ stylesheet = do
     return x
 
   return $ concat [
-      if null ch then [] else [DefItem (Definition Charset (tokensData ch))],
+      if null ch then [] else [DefItem (Definition Charset (L.tokensData ch))],
       if null imp then [] else map DefItem imp,
       if null ns then [] else map DefItem ns,
       css]
@@ -130,7 +130,7 @@ _import =
           return $ m ++ concat (concat res),
         count 1 (L._STATIC ";"),
         many L._S]
-    return $ Definition Import (strip $ tokensData res)
+    return $ Definition Import (strip $ L.tokensData res)
 
 selectors_group :: Parser CompSelector
 selectors_group = do
@@ -143,7 +143,7 @@ selectors_group = do
 
 simple_selector_sequence :: Parser String
 simple_selector_sequence =
-  tokensData <$> concat <$> sequence [
+  L.tokensData . concat <$> sequence [
     option [] (try universal
               <|> type_selector),
     concat <$> many (count 1 L._HASH
@@ -182,7 +182,7 @@ namespace =
         many L._S,
         count 1 (L._STATIC ";"),
         many L._S]
-    return $ Definition Namespace (strip $ tokensData res)
+    return $ Definition Namespace (strip $ L.tokensData res)
 
 namespace_prefix :: Parser [L.Token]
 namespace_prefix =
@@ -208,7 +208,7 @@ media = do
   rules <- many ruleset
   count 1 (L._STATIC "}")
   many L._S
-  return $ Media (tokensData m ++ tokensData s) rules
+  return $ Media (L.tokensData m ++ L.tokensData s) rules
 
 medium :: Parser [L.Token]
 medium = concat <$> sequence [
@@ -241,7 +241,7 @@ page =
             return $ concat res),
         count 1 (L._STATIC "}"),
         many L._S]
-    return $ Definition Page (strip $ tokensData res)
+    return $ Definition Page (strip $ L.tokensData res)
 
 pseudo_page :: Parser [L.Token]
 pseudo_page = (:) <$> L._STATIC ":" <*> count 1 L._IDENT
@@ -268,7 +268,7 @@ font_face =
               return $ concat res),
           count 1 (L._STATIC "}"),
           many L._S]
-    return $ Definition FontFace (strip $ tokensData res)
+    return $ Definition FontFace (strip $ L.tokensData res)
 
 operator :: Parser [L.Token]
 operator =
@@ -280,17 +280,16 @@ combinator :: Parser [L.Token]
 combinator =
   do
       c <- try L._GREATER
-      s <- many L._S
-      return $ c : s
+      many L._S
+      return [c, (L.S, " ")]
   <|> do
       c <- try L._PLUS
-      s <- many L._S
-      return $ c : s
+      many L._S
+      return [c, (L.S, " ")]
   <|> do
       c <- try L._TILDE
-      s <- many L._S
-      return $ c : s
-  <|> many1 L._S
+      many L._S
+      return [c, (L.S, " ")]
 
 unary_operator :: Parser [L.Token]
 unary_operator = do
@@ -310,11 +309,10 @@ ruleset = do
     do
       count 1 (L._STATIC ";")
       many L._S
-      d <- declaration
-      return d
+      declaration
   count 1 (L._STATIC "}")
   many L._S
-  return $ makeRule g (d : ds)
+  return $ makeRule g (filter (/= ("","")) (d : ds))
 
 selector :: Parser SelectorT
 selector = do
@@ -322,9 +320,10 @@ selector = do
   xs <- many
     (do
         c <- combinator
+             <|> many1 L._S
         s <- simple_selector_sequence
-        return $ (L.tokensData c) ++ s)
-  return $ x : xs
+        return $ strip $ L.tokensData c ++ s)
+  return $ filter (/= "") (x : xs)
 
 universal :: Parser [L.Token]
 universal =
@@ -379,15 +378,13 @@ declaration =
       count 1 (L._STATIC ":")
       many L._S
       e <- expr
-      return $ (tokensData p, tokensData e)
+      return (L.tokensData p, L.tokensData e)
     pr <- option [] prio
-    return $ (fst x, (snd x) ++ (tokensData pr))
+    return (fst x, snd x ++ L.tokensData pr)
   <|> return ("", "")
 
 prio :: Parser [L.Token]
 prio =  (:) <$> L._IMPORTANT_SYM <*> many L._S
-
-
 
 functional_pseudo :: Parser [L.Token]
 functional_pseudo = concat <$> sequence [

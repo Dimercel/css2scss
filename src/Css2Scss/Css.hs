@@ -2,21 +2,28 @@
 
 module Css2Scss.Css
     ( Rule(..)
+    , selector
+    , props
     , Media(..)
+    , mediaSel
+    , rules
     , Definition(..)
+    , defName
+    , defValue
     , DefinitionT(..)
     , CssItem (..)
     , Ruleset
+    , Property
     , PropertySet
     , SelectorT
     , CompSelector
     , makeRule
     , isCompositeRule
-    , toSimpleRule
     , isChildRule
     , isDirectChildRule
     , isParentRule
     , isFamilyRules
+    , toSimpleRule
     ) where
 
 
@@ -31,6 +38,7 @@ import Css2Scss.Utils (eol)
 
 
 type PropertySet = Map String String
+type Property = (String, String)
 
 -- Селектор состоит из групп, каждая из которых
 -- в свою очередь, состоит из уровней.

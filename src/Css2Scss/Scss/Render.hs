@@ -1,63 +1,91 @@
-{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 
 module Css2Scss.Scss.Render
-    ( Renderer(..)
-    , PrettyRenderer(..)
-    ) where
+  ( MinifyRenderer(..)
+  , PrettyRenderer(..)
+  ) where
 
+import Data.List (intercalate)
+import Data.HashMap (assocs)
+import Data.Tree (Tree(..))
+import Data.Label
 
-import Data.List
-import Data.Tree
-import Css2Scss.Scss
+import qualified Css2Scss.Css as Css
+import Css2Scss.Scss (Rule(..))
+import Css2Scss.Utils (eol)
 
-
-eol :: String
-eol = "\n"
-
-indentSize :: Int
-indentSize = 4
-
-indent :: Int -> String
-indent level = replicate (indentSize * level) ' '
-
-class Renderer a where
-        render :: a -> String
 
 class PrettyRenderer a where
-        renderPretty :: Int -> a -> String
+    renderPretty :: a -> String
 
-instance Renderer Property where
-        render (Property name val) = name ++ " : " ++ val ++ ";"
+instance PrettyRenderer Css.SelectorT where
+  renderPretty = unwords
 
-instance Renderer Rule where
-        render (Rule sel props) = sel ++ " {" ++ propsText ++ "}"
-            where propsText = intercalate " " (map (render) props)
+instance PrettyRenderer Css.CompSelector where
+  renderPretty = intercalate ("," ++ eol) . map renderPretty
 
-instance Renderer (Tree Rule) where
-        render (Node rule []) = render rule
-        render (Node (Rule sel props) rules) =
-            concat [sel, " {", propsText, (concat $ map (render) rules), " }"]
-            where propsText = intercalate (" ") (map (render) props)
+instance PrettyRenderer Css.Property where
+  renderPretty (name, val) = name ++ ": " ++ val ++ ";"
 
-instance Renderer Variable where
-        render (Variable name val) = concat ["$", name, ": ", val, ";"]
+instance PrettyRenderer Css.PropertySet where
+  renderPretty set =
+    let indentSpace = "    "
+    in concatMap (\x -> indentSpace ++ renderPretty x ++ eol) (assocs set)
 
-instance PrettyRenderer Property where
-        renderPretty level prop = indent level ++ (render prop)
+instance PrettyRenderer Css.Rule where
+  renderPretty (Css.Rule selector props) =
+    concat [
+      renderPretty selector,
+      " {",
+      eol,
+      renderPretty props,
+      "}",
+      eol,
+      eol
+    ]
 
 instance PrettyRenderer Rule where
-        renderPretty level (Rule sel props) =
-            concat [indent level, sel, " {", eol, propsText, eol, indent level, "}", eol]
-            where propsText = intercalate (eol) (map (renderPretty (level+1)) props)
+  renderPretty rule =
+    let renderWithIndent (Node rule subrules) spacer level =
+          concat [
+            levelSpacer,
+            renderPretty $ get Css.selector rule,
+            " {",
+            eol,
+            indentProps,
+            if null subrules then levelSpacer else eol,
+            concatMap (\x -> renderWithIndent x spacer (level + 1)) subrules,
+            if null subrules then "" else levelSpacer,
+            "}",
+            eol,
+            eol
+          ]
+          where levelSpacer = concat $ replicate level spacer
+                renderedProps = map (\x -> renderPretty x ++ eol) (assocs (get Css.props rule))
+                indentProps = concatMap (\x -> levelSpacer ++ spacer ++ x) renderedProps
+    in renderWithIndent rule "    " 0
 
-instance PrettyRenderer (Tree Rule) where
-        renderPretty level (Node rule []) = renderPretty level rule
-        renderPretty level (Node (Rule sel props) rules) =
-            concat [eol, indent level, sel, " {",
-                    eol, propsText, eol, eol,
-                    (concat $ map (renderPretty (level + 1)) rules),
-                    indent level, "}", eol]
-            where propsText = intercalate (eol) (map (renderPretty (level + 1)) props)
 
-instance PrettyRenderer Variable where
-        renderPretty level var = concat [indent level, render var]
+class MinifyRenderer a where
+    renderMinify :: a -> String
+
+instance MinifyRenderer Css.SelectorT where
+  renderMinify = unwords
+
+instance MinifyRenderer Css.CompSelector where
+  renderMinify = intercalate "," . map renderMinify
+
+instance MinifyRenderer Css.Property where
+  renderMinify (name, val) = name ++ ":" ++ val ++ ";"
+
+instance MinifyRenderer Css.PropertySet where
+  renderMinify set = concatMap renderMinify (assocs set)
+
+instance MinifyRenderer Css.Rule where
+  renderMinify (Css.Rule selector props) =
+    concat [
+      renderMinify selector,
+      "{",
+      renderMinify props,
+      "}"
+    ]

@@ -23,17 +23,20 @@ module Css2Scss.Scss.Converter (toScssRules) where
 
 import Data.List ( groupBy
                  , sortBy
+                 , partition
                  , (\\))
 import Data.Tree (Tree(..))
 import Data.Label
 
 import Css2Scss.Css.Parser (stylesheet)
 import Css2Scss.Css ( Rule(..)
+                    , makeRule
                     , selector
                     , props
                     , Ruleset
                     , SelectorT
                     , toSimpleRule
+                    , isCompositeRule
                     , isChildRule
                     , isFamilyRules)
 import qualified Css2Scss.Scss as Scss
@@ -88,10 +91,24 @@ cssFamily2Scss rules =
         in Node root (map (\x -> toScss x ((\\) rules directChildren)) directChildren)
   in scssNormalizeSel [] $ toScss (head sortedRules) (tail sortedRules)
 
+-- Если набор свойств scss-правила полностью совпадает
+-- с другим, то такие правила можно представить одним с
+-- составным селектором. Функция отыскивает такие правила
+-- и объединяет их в одно.
+groupBySelector :: Scss.Ruleset -> Scss.Ruleset
+groupBySelector [] = []
+groupBySelector rules =
+  let (compound, single) = partition (\(Node x _) -> isCompositeRule x) rules
+      getProps (Node rule _) = get props rule
+      getSelector (Node rule _) = get selector rule
+      grouped = groupBy (\x y -> getProps x == getProps y) single
+      unionRules r = Node (Rule (map (head . getSelector) r) (getProps $ head r)) []
+  in map unionRules grouped ++ compound
+
 -- Конвертирует список css-правил в список scss-структур
-toScssRules :: [Rule] -> [Scss.Rule]
+toScssRules :: [Rule] -> Scss.Ruleset
 toScssRules rules =
   let preProcess = foldr (\x acc -> if hasOnlyOneRoot x
                                     then x : acc else acc ++ [[y] | y <- x])
                    [] (groupByFamily $ onlySingleRules rules)
-  in map cssFamily2Scss preProcess
+  in groupBySelector $ map cssFamily2Scss preProcess

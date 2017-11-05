@@ -21,7 +21,7 @@ import qualified Css2Scss.Css as Css
 -- структуры
 type Rule     = Tree Css.Rule
 
-type Ruleset  = [Tree Rule]
+type Ruleset  = [Rule]
 
 data Variable = Variable { _varIdent
                          , _varValue :: String

@@ -7,6 +7,7 @@ module Css2Scss.Scss
     , Extend
     , varIdent
     , varValue
+    , hasChilds
     ) where
 
 import Data.Tree (Tree(..))
@@ -30,3 +31,7 @@ data Variable = Variable { _varIdent
 type Extend   = Rule
 
 mkLabels [''Variable]
+
+
+hasChilds :: Rule -> Bool
+hasChilds (Node _ childs) = not $ null childs

@@ -98,7 +98,7 @@ cssFamily2Scss rules =
 groupBySelector :: Scss.Ruleset -> Scss.Ruleset
 groupBySelector [] = []
 groupBySelector rules =
-  let (compound, single) = partition (\(Node x _) -> isCompositeRule x) rules
+  let (compound, single) = partition Scss.hasChilds rules
       getProps (Node rule _) = get props rule
       getSelector (Node rule _) = get selector rule
       grouped = groupBy (\x y -> getProps x == getProps y) single

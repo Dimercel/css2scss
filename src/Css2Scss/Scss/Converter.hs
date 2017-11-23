@@ -25,10 +25,20 @@ import Data.List ( groupBy
                  , sortBy
                  , partition
                  , (\\))
+import Data.Char (toUpper)
 import Data.Tree (Tree(..))
 import Data.Label
+import Data.HashMap ( Map(..)
+                    , insertWith
+                    , fromList
+                    , unionWith
+                    , empty
+                    , elems
+                    , union)
+import Text.ParserCombinators.Parsec
 
-import Css2Scss.Css.Parser (stylesheet)
+import Css2Scss.Css.Parser ( stylesheet
+                           , hexcolor)
 import Css2Scss.Css ( Rule(..)
                     , makeRule
                     , selector
@@ -112,3 +122,30 @@ toScssRules rules =
                                     then x : acc else acc ++ [[y] | y <- x])
                    [] (groupByFamily $ onlySingleRules rules)
   in groupBySelector $ map cssFamily2Scss preProcess
+
+-- Является ли строка hex-представлением цвета?
+isColorValue :: String -> Bool
+isColorValue str =
+  case parse hexcolor "" str of
+    Right _ -> True
+    Left  _ -> False
+
+-- Цвет может храниться в форме #fff или #ffffff.
+-- Данная функция преобразует #fff -> #ffffff
+toFullHexColorForm :: String -> String
+toFullHexColorForm str
+  | length str == 4 = map toUpper (str ++ tail str)
+  | otherwise = str
+
+findColorValues :: Scss.Rule -> Map String Int
+findColorValues (Node rule subrules) =
+  let properties = get props rule
+      incCount hash key = insertWith (\_ y -> y + 1) key 1 hash
+      -- Статистика вхождений цветов. Ключ - hex-значение,
+      -- значение - кол-во совпадений. Пример: "#fff" => 1
+      stat = foldl (\acc x -> if isColorValue x
+                      then incCount acc (toFullHexColorForm x)
+                      else acc)
+             empty (elems properties)
+  in foldl (\acc x -> unionWith (+) x acc)
+           stat (map findColorValues subrules)

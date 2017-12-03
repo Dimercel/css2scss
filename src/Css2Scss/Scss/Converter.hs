@@ -36,24 +36,20 @@ import Data.HashMap ( Map(..)
                     , findWithDefault
                     , fromList
                     , insertWith
-                    , unionWith
-                    , union
-                    , updateWithKey)
+                    , unionWith)
 import qualified Data.HashMap (map)
 import Text.ParserCombinators.Parsec
 
 import Css2Scss.Css.Parser ( stylesheet
                            , hexcolor)
 import Css2Scss.Css ( Rule(..)
-                    , makeRule
-                    , selector
-                    , props
                     , Ruleset
                     , SelectorT
-                    , toSimpleRule
-                    , isCompositeRule
                     , isChildRule
-                    , isFamilyRules)
+                    , isFamilyRules
+                    , props
+                    , selector
+                    , toSimpleRule)
 import qualified Css2Scss.Scss as Scss
 
 

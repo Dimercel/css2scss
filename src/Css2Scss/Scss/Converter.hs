@@ -21,20 +21,25 @@
 module Css2Scss.Scss.Converter (toScssRules) where
 
 
-import Data.List ( groupBy
-                 , sortBy
+import Data.List ( find
+                 , groupBy
                  , partition
+                 , sortBy
+                 , zipWith
                  , (\\))
 import Data.Char (toUpper)
 import Data.Tree (Tree(..))
 import Data.Label
 import Data.HashMap ( Map(..)
-                    , insertWith
-                    , fromList
-                    , unionWith
-                    , empty
                     , elems
-                    , union)
+                    , empty
+                    , findWithDefault
+                    , fromList
+                    , insertWith
+                    , unionWith
+                    , union
+                    , updateWithKey)
+import qualified Data.HashMap (map)
 import Text.ParserCombinators.Parsec
 
 import Css2Scss.Css.Parser ( stylesheet
@@ -137,6 +142,10 @@ toFullHexColorForm str
   | length str == 4 = map toUpper (str ++ tail str)
   | otherwise = str
 
+-- В значениях свойств могут встречаться цветовые характеристики.
+-- Данная функция находит такие значения и возвращает хэш со
+-- статистикой о них. Ключами являются hex-представления цветов, а
+-- значениями количество найденных элементов такого цвета.
 findColorValues :: Scss.Rule -> Map String Int
 findColorValues (Node rule subrules) =
   let properties = get props rule
@@ -149,3 +158,22 @@ findColorValues (Node rule subrules) =
              empty (elems properties)
   in foldl (\acc x -> unionWith (+) x acc)
            stat (map findColorValues subrules)
+
+-- В Scss есть понятие переменной. После поиска цветовых значений
+-- нужно построить scss-переменные представляющие их. Данная
+-- функция строит эти переменные по переданному списку уникальных
+-- цветовых значений.
+makeVariablesByColor :: [String] -> [Scss.Variable]
+makeVariablesByColor colors =
+  zipWith (\x y -> Scss.Variable ("color" ++ show y) x) colors [0..]
+
+-- Подменяет цветовые значения на имена scss-переменных, переданных в
+-- списке.
+replaceColorOnVariable :: Scss.Rule -> [Scss.Variable] -> Scss.Rule
+replaceColorOnVariable r vars =
+  let colors = fromList $ map (\(Scss.Variable id val) -> (val, "$" ++ id)) vars
+      replaceProcess (Node rule subrules) =
+        let properties = get props rule
+            newProps   = Data.HashMap.map (\x -> findWithDefault x x colors) properties
+        in Node (Rule (get selector rule) newProps) (map replaceProcess subrules)
+  in replaceProcess r

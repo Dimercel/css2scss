@@ -4,7 +4,7 @@
 -- переменных, построение вложенных структур стилей, поиск расширений.
 --
 -- Автоматическое создание переменных: работает только для значений цветов,
--- алгоритм сканирует исходную CSS структуру и анализирует использование 
+-- алгоритм сканирует исходную CSS структуру и анализирует использование
 -- одинаковых цветовых значений в свойствах стиля. Если кол-во использований
 -- одного и того же цветового значения больше некоторого порога, то создается
 -- переменная с именем @color-n (n - номер по счету) в которой содержится
@@ -96,8 +96,8 @@ cssFamily2Scss rules =
   let sortedRules = sortByLevel rules
       toScss root [] = Node root []
       toScss root rules =
-        let onlyChildren = filter (`isChildRule` root) rules
-            hasParents x = any (isChildRule x)
+        let onlyChildren   = filter (`isChildRule` root) rules
+            hasParents x   = any (isChildRule x)
             directChildren = filter (\x -> not $ hasParents x onlyChildren) onlyChildren
         in Node root (map (\x -> toScss x ((\\) rules directChildren)) directChildren)
   in scssNormalizeSel [] $ toScss (head sortedRules) (tail sortedRules)
@@ -109,10 +109,10 @@ cssFamily2Scss rules =
 groupBySelector :: Scss.Ruleset -> Scss.Ruleset
 groupBySelector [] = []
 groupBySelector rules =
-  let (compound, single) = partition Scss.hasChilds rules
-      getProps (Node rule _) = get props rule
+  let (compound, single)        = partition Scss.hasChilds rules
+      getProps (Node rule _)    = get props rule
       getSelector (Node rule _) = get selector rule
-      grouped = groupBy (\x y -> getProps x == getProps y) single
+      grouped      = groupBy (\x y -> getProps x == getProps y) single
       unionRules r = Node (Rule (map (head . getSelector) r) (getProps $ head r)) []
   in map unionRules grouped ++ compound
 
@@ -121,7 +121,7 @@ toScssRules :: [Rule] -> Scss.Ruleset
 toScssRules rules =
   let preProcess = foldr (\x acc -> if hasOnlyOneRoot x
                                     then x : acc else acc ++ [[y] | y <- x])
-                   [] (groupByFamily $ onlySingleRules rules)
+                         [] (groupByFamily $ onlySingleRules rules)
   in groupBySelector $ map cssFamily2Scss preProcess
 
 -- Является ли строка hex-представлением цвета?
@@ -136,7 +136,7 @@ isColorValue str =
 toFullHexColorForm :: String -> String
 toFullHexColorForm str
   | length str == 4 = map toUpper (str ++ tail str)
-  | otherwise = str
+  | otherwise       = str
 
 -- В значениях свойств могут встречаться цветовые характеристики.
 -- Данная функция находит такие значения и возвращает хэш со
@@ -144,7 +144,7 @@ toFullHexColorForm str
 -- значениями количество найденных элементов такого цвета.
 findColorValues :: Scss.Rule -> Map String Int
 findColorValues (Node rule subrules) =
-  let properties = get props rule
+  let properties        = get props rule
       incCount hash key = insertWith (\_ y -> y + 1) key 1 hash
       -- Статистика вхождений цветов. Ключ - hex-значение,
       -- значение - кол-во совпадений. Пример: "#fff" => 1

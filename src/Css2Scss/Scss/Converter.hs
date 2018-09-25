@@ -103,7 +103,7 @@ cssFamily2Scss rules =
   in scssNormalizeSel [] $ toScss (head sortedRules) (tail sortedRules)
 
 -- Если набор свойств scss-правила полностью совпадает
--- с другим, то такие правила можно представить одним с
+-- с другим, то такие правила можно представить одним
 -- составным селектором. Функция отыскивает такие правила
 -- и объединяет их в одно.
 groupBySelector :: Scss.Ruleset -> Scss.Ruleset

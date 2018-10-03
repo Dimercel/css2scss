@@ -71,17 +71,16 @@ sortByLevel =
                               (length $ head $ get selector y)
   in sortBy eqByLevel
 
--- Есть ли в указанном списке правило, являющееся родителем
--- относительно всех остальных
+-- Есть ли в указанном списке CSS-правило, являющееся родителем
+-- относительно всех остальных?
 hasOnlyOneRoot :: [Rule] -> Bool
 hasOnlyOneRoot rules =
   let withOutElem x = filter (x /=)
   in any (\x -> all (`isChildRule` x) (withOutElem x rules)) rules
 
--- Данная функция убирает не нужные части из имен селекторов.
--- Scss - древовидная структура, так что корень имени селектора
--- не должен дублироваться в дочерних селекторах. Функция
--- устраняет такое дублирование.
+-- Создает SCSS-структуру по CSS-правилу. Scss - древовидная структура,
+-- так что "корень" имени селектора не должен дублироваться в дочерних
+-- селекторах. Функция устраняет такое дублирование.
 scssNormalizeSel :: SelectorT -> Scss.Rule -> Scss.Rule
 scssNormalizeSel root (Node (Rule sel props) subRules) =
   Node (Rule [(\\) (head sel) root] props)

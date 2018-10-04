@@ -138,23 +138,22 @@ isColorValue str =
     Right _ -> True
     Left  _ -> False
 
--- Цвет может храниться в форме #fff или #ffffff.
--- Данная функция преобразует #fff -> #ffffff
+-- Далее стоит учесть, что значение представляющие цвет храниться в форме #fff или #ffffff.
+-- Такая двойственность нам не нужна и мы конвертируем #fff -> #ffffff.
 toFullHexColorForm :: String -> String
 toFullHexColorForm str
   | length str == 4 = map toUpper (str ++ tail str)
   | otherwise       = str
 
--- В значениях свойств могут встречаться цветовые характеристики.
--- Данная функция находит такие значения и возвращает хэш со
--- статистикой о них. Ключами являются hex-представления цветов, а
--- значениями количество найденных элементов такого цвета.
+-- Теперь мы вооружены всем чтобы приступить к подсчету вхождений цветов.
+-- Собираем простейшую статистику состоящую из наименования цвета и количества
+-- его вхождений в правило. Возвращаем информацию в виде хеша.
 findColorValues :: Scss.Rule -> Map String Int
 findColorValues (Node rule subrules) =
   let properties        = get props rule
       incCount hash key = insertWith (\_ y -> y + 1) key 1 hash
       -- Статистика вхождений цветов. Ключ - hex-значение,
-      -- значение - кол-во совпадений. Пример: "#fff" => 1
+      -- значение - кол-во совпадений. Пример: "#ffffff" => 1
       stat = foldl (\acc x -> if isColorValue x
                       then incCount acc (toFullHexColorForm x)
                       else acc)
@@ -162,16 +161,14 @@ findColorValues (Node rule subrules) =
   in foldl (\acc x -> unionWith (+) x acc)
            stat (map findColorValues subrules)
 
--- В Scss есть понятие переменной. После поиска цветовых значений
--- нужно построить scss-переменные представляющие их. Данная
--- функция строит эти переменные по переданному списку уникальных
--- цветовых значений.
+-- После подсчета статистики вхождений цветов мы уже можем построить
+-- SCSS-переменные. Имена этих переменных будут иметь формат @color-n,
+-- где n служит уникальным идентификатором переменной.
 makeVariablesByColor :: [String] -> [Scss.Variable]
 makeVariablesByColor colors =
-  zipWith (\x y -> Scss.Variable ("color" ++ show y) x) colors [0..]
+  zipWith (\x y -> Scss.Variable ("color-" ++ show y) x) colors [0..]
 
--- Подменяет цветовые значения на имена scss-переменных, переданных в
--- списке.
+-- Все что осталось это заменить цветовые значения на соответствующие SCSS-переменные.
 replaceColorOnVariable :: Scss.Rule -> [Scss.Variable] -> Scss.Rule
 replaceColorOnVariable r vars =
   let colors = fromList $ map (\(Scss.Variable id val) -> (val, "$" ++ id)) vars

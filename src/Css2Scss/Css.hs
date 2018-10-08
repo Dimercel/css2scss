@@ -18,6 +18,7 @@ module Css2Scss.Css
     , SelectorT
     , CompSelector
     , makeRule
+    , levelsCount
     , isCompositeRule
     , isChildRule
     , isDirectChildRule
@@ -80,6 +81,16 @@ makeRule sel = Rule (selectorNF sel) . fromList
 -- - уровни селектора не содержат начальных или конечных пробелов
 selectorNF :: CompSelector -> CompSelector
 selectorNF = map (map (strip . replace eol ""))
+
+
+-- Для одиночного правила можно посчитать количество
+-- уровней в селекторе. Каждый новый пробел означает
+-- новый уровень.
+-- Пример: ".item1 .item2 p" - 3-х уровневый.
+levelsCount :: Rule -> Int
+levelsCount rule
+  | isCompositeRule rule = 0
+  | otherwise = length $ head $ get selector rule
 
 -- Является ли селектор составным?
 -- Если в селекторе присутствует запятая,

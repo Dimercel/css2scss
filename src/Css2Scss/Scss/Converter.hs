@@ -38,6 +38,7 @@ import Css2Scss.Css.Parser ( stylesheet
 import Css2Scss.Css ( Rule(..)
                     , Ruleset
                     , SelectorT
+                    , levelsCount
                     , isChildRule
                     , isFamilyRules
                     , props
@@ -46,7 +47,15 @@ import Css2Scss.Css ( Rule(..)
 import qualified Css2Scss.Scss as Scss
 
 
--- Устраняет составные селекторы, деля их на одиночные
+-- | ПОСТРОЕНИЕ SCSS-СТРУКТУР.
+--
+--   В этом разделе нам предстоит построить SCSS-структуры на основе
+-- CSS-стилей. Начнем пожалуй с предварительных замечаний, которые
+-- важны для последующей конвертации.
+
+--   В CSS можно определить правило сразу для нескольких селекторов,
+-- тогда они пишутся через запятую. Нам же, для простоты, лучше поделить
+-- их на одиночные. Это упростит дальнейший алгоритм.
 onlySingleRules :: Ruleset -> Ruleset
 onlySingleRules = foldr ((++) . toSimpleRule) []
 
@@ -60,8 +69,8 @@ groupByFamily = groupBy isFamilyRules
 -- Каждый пробел в селекторе составляет новый уровень.
 sortByLevel :: [Rule] -> [Rule]
 sortByLevel =
-  let eqByLevel x y = compare (length $ head $ get selector x)
-                              (length $ head $ get selector y)
+  let eqByLevel x y = compare (levelsCount x)
+                              (levelsCount y)
   in sortBy eqByLevel
 
 -- Есть ли в указанном списке CSS-правило, являющееся родителем

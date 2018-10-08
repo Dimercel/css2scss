@@ -20,7 +20,7 @@ import Data.List ( find
                  , sortBy
                  , zipWith
                  , (\\))
-import Data.Char (toUpper)
+import Data.Char (toLower)
 import Data.Tree (Tree(..))
 import Data.Label
 import Data.HashMap ( Map(..)
@@ -132,18 +132,19 @@ toScssRules rules =
 
 
 -- Прежде всего нам понадобится отличать цветовые значения от всех остальных.
+-- Мы ограничимся только hex-представлениями цвета.
 isColorValue :: String -> Bool
 isColorValue str =
   case parse hexcolor "" str of
     Right _ -> True
     Left  _ -> False
 
--- Далее стоит учесть, что значение представляющие цвет храниться в форме #fff или #ffffff.
+-- Далее стоит учесть, что значение представляющие цвет хранится в форме #fff или #ffffff.
 -- Такая двойственность нам не нужна и мы конвертируем #fff -> #ffffff.
 toFullHexColorForm :: String -> String
 toFullHexColorForm str
-  | length str == 4 = map toUpper (str ++ tail str)
-  | otherwise       = str
+  | length str == 4 = map toLower (str ++ tail str)
+  | otherwise       = map toLower str
 
 -- Теперь мы вооружены всем чтобы приступить к подсчету вхождений цветов.
 -- Собираем простейшую статистику состоящую из наименования цвета и количества

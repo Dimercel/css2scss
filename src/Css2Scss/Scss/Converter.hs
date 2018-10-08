@@ -67,7 +67,7 @@ groupByFamily = groupBy isFamilyRules
 
 -- Сортирует список css-правил по уровню селектора.
 -- Каждый пробел в селекторе составляет новый уровень.
-sortByLevel :: [Rule] -> [Rule]
+sortByLevel :: Ruleset -> Ruleset
 sortByLevel =
   let eqByLevel x y = compare (levelsCount x)
                               (levelsCount y)
@@ -75,7 +75,7 @@ sortByLevel =
 
 -- Есть ли в указанном списке CSS-правило, являющееся родителем
 -- относительно всех остальных?
-hasOnlyOneRoot :: [Rule] -> Bool
+hasOnlyOneRoot :: Ruleset -> Bool
 hasOnlyOneRoot rules =
   let withOutElem x = filter (x /=)
   in any (\x -> all (`isChildRule` x) (withOutElem x rules)) rules
@@ -91,7 +91,7 @@ scssNormalizeSel root (Node (Rule sel props) subRules) =
 -- Строит иерархическую scss-структуру на основе css-правил.
 -- Список должен содержать только однокоренные css-правила
 -- Например: ".item1", ".item1 .item2" ".item1 .item2 .item3"
-cssFamily2Scss :: [Rule] -> Scss.Rule
+cssFamily2Scss :: Ruleset -> Scss.Rule
 cssFamily2Scss [x] = Node x []
 cssFamily2Scss rules =
   let sortedRules = sortByLevel rules
@@ -118,7 +118,7 @@ groupBySelector rules =
   in map unionRules grouped ++ compound
 
 -- Конвертирует список css-правил в список scss-структур
-toScssRules :: [Rule] -> Scss.Ruleset
+toScssRules :: Ruleset -> Scss.Ruleset
 toScssRules rules =
   let preProcess = foldr (\x acc -> if hasOnlyOneRoot x
                                     then x : acc else acc ++ [[y] | y <- x])

@@ -9,7 +9,26 @@ import Test.QuickCheck.Random
 import Css2Scss.Css ( Rule(..)
                     , Ruleset
                     , Property
-                    , PropertySet)
+                    , PropertySet
+                    , SelectorT
+                    , CompSelector)
+
+
+propertyNameSamples :: [String]
+propertyNameSamples =
+  [ "margin", "padding", "border", "color"
+  , "font-size", "position", "height", "width"
+  , "overflow", "font", "cursor"]
+
+propertyValueSamples :: [String]
+propertyValueSamples =
+  ["absolute", "auto", "black", "white"] ++
+  [show x  ++ "px" | x <- [0..100]]
+
+selectorSamples :: [String]
+selectorSamples =
+  [ ".class-1", ".class-2", ".class-3"
+  , "p", "span", "div", "a"]
 
 
 getSample :: Int -> Gen a -> a
@@ -19,19 +38,21 @@ selectorLevel :: Gen String
 selectorLevel = elements [ ".class-1", ".class-2", ".class-3"
                          , "p", "span", "div", "a"]
 
-selector :: Int -> Gen [String]
+selector :: Int -> Gen SelectorT
 selector levels =
   do
     l <- infiniteListOf selectorLevel
     return $ take levels l
 
+compositeSelector :: Int -> Gen SelectorT -> Gen CompSelector
+compositeSelector = vectorOf
+
+
 property :: Gen Property
 property =
   do
-    e <- elements [ "margin", "padding", "border", "color"
-                  , "font-size", "position", "height", "width"
-                  , "overflow", "font", "cursor"]
-    v <- elements (["absolute", "auto", "black", "white"] ++ [show x  ++ "px" | x <- [0..100]])
+    e <- elements propertyNameSamples
+    v <- elements propertyValueSamples
     return (e, v)
 
 propertySet :: Int -> Gen PropertySet
@@ -39,3 +60,13 @@ propertySet maxPropCount =
   do
     l <- infiniteListOf property
     return $ fromList (take maxPropCount l)
+
+rule :: Gen CompSelector -> Gen PropertySet -> Gen Rule
+rule gSel gProps =
+  do
+    s <- gSel
+    p <- gProps
+    return $ Rule s p
+
+ruleSet :: Int -> Gen Rule -> Gen Ruleset
+ruleSet = vectorOf

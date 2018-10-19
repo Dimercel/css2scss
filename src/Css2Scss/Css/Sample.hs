@@ -1,4 +1,4 @@
-module Css2Scss.Scss.Converter () where
+module Css2Scss.Css.Sample () where
 
 
 import Data.HashMap ( Map(..)

@@ -50,9 +50,14 @@ import qualified Css2Scss.Scss as Scss
 -- | ПОСТРОЕНИЕ SCSS-СТРУКТУР.
 --
 --
---   В этом разделе нам предстоит построить SCSS-структуры на основе
--- CSS-стилей. Начнем пожалуй с предварительных замечаний, которые
--- важны для последующей конвертации.
+--   В этом разделе нам предстоит построить SCSS-структуры на основе CSS-стилей.
+-- Основными вопросами здесь будут построение древовидной структуры SCSS на
+-- основе CSS-правил, а также вопрос принадлежности их к одной "семье".
+--   Этот раздел можно условно поделить на 4 этапа:
+-- - Отыскание составных CSS-правил и создание из них одиночных;
+-- - Группировка CSS-правил на основании принадлежности к одной "семье";
+-- - Собственно построение SCSS-структур;
+-- - Поиск с целью объединения одинаковых SCSS-правил;
 
 --   В CSS можно определить правило сразу для нескольких селекторов,
 -- тогда они пишутся через запятую. Нам же, для простоты, лучше поделить
@@ -60,9 +65,10 @@ import qualified Css2Scss.Scss as Scss
 onlySingleRules :: Ruleset -> Ruleset
 onlySingleRules = foldr ((++) . toSimpleRule) []
 
--- Вернет список сгруппированных по семейной принадлежности правил.
--- Правила образуют семейство, если у них общий корень.
--- Например: .item1 и .item1 .item2 принадлежат одной семье.
+--   Далее нем предстоит сформировать "семьи" правил основываясь
+-- на их селекторах. CSS-правила принадлежат одной "семье", если
+-- у них есть одинаковый корень в селекторе.
+-- Например селекторы: .item1 и .item1 .item2 принадлежат одной семье.
 groupByFamily :: Ruleset -> [Ruleset]
 groupByFamily = groupBy isFamilyRules
 
@@ -78,19 +84,20 @@ sortByLevel =
 -- относительно всех остальных?
 hasOnlyOneRoot :: Ruleset -> Bool
 hasOnlyOneRoot rules =
-  let withOutElem x = filter (x /=)
-  in any (\x -> all (`isChildRule` x) (withOutElem x rules)) rules
+  let withoutElem x = filter (x /=)
+  in any (\x -> all (`isChildRule` x) (withoutElem x rules)) rules
 
---   В процессе построения древовидного SCSS, мы вкладываем одни правила
--- в другие. Причем, вложенность получится только для исходных CSS-правил,
--- имеющих общий корень. В CSS нет вложенности и селектор всегда абсолютный.
--- В SCSS же, при вложении, нам нужно указывать относительные имена селекторов.
---   Следующая функция устраняет дублирование "корня" в дочерних селекторах,
--- внутри SCSS-структуры.
-scssNormalizeSel :: SelectorT -> Scss.Rule -> Scss.Rule
-scssNormalizeSel root (Node (Rule sel props) subRules) =
+--   При построении SCSS-структуры стоит заметить, что в исходных CSS-правилах
+-- все селекторы абсолютны. То есть селектор всегда описывает путь от самого
+-- корня и до оконечного звена. Это является следствием линейной структуры CSS.
+--   В SCSS же напротив, при вложенности селекторы не содержат корень, а лишь
+-- относительный путь. В качестве опорной точки выступает родительское правило.
+-- Следовательно нам придется убрать корень из всех селекторов SCSS-иерархии,
+-- кроме очевидно, самого первого звена. Этим определяется нормальная форма SCSS.
+scssNormalize :: SelectorT -> Scss.Rule -> Scss.Rule
+scssNormalize root (Node (Rule sel props) subRules) =
   Node (Rule [(\\) (head sel) root] props)
-       (map (scssNormalizeSel (head sel)) subRules)
+       (map (scssNormalize (head sel)) subRules)
 
 -- Строит иерархическую scss-структуру на основе css-правил.
 -- Список должен содержать только однокоренные css-правила
@@ -105,7 +112,7 @@ cssFamily2Scss rules =
             hasParents x   = any (isChildRule x)
             directChildren = filter (\x -> not $ hasParents x onlyChildren) onlyChildren
         in Node root (map (\x -> toScss x ((\\) rules directChildren)) directChildren)
-  in scssNormalizeSel [] $ toScss (head sortedRules) (tail sortedRules)
+  in scssNormalize [] $ toScss (head sortedRules) (tail sortedRules)
 
 -- Если набор свойств scss-правила полностью совпадает
 -- с другим, то такие правила можно представить одним

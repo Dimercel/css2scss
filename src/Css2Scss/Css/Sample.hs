@@ -35,8 +35,7 @@ getSample :: Int -> Gen a -> a
 getSample seed (MkGen g) = g (mkQCGen seed) 30
 
 selectorLevel :: Gen String
-selectorLevel = elements [ ".class-1", ".class-2", ".class-3"
-                         , "p", "span", "div", "a"]
+selectorLevel = elements selectorSamples
 
 selector :: Int -> Gen SelectorT
 selector levels =
@@ -68,5 +67,10 @@ rule gSel gProps =
     p <- gProps
     return $ Rule s p
 
-ruleSet :: Int -> Gen Rule -> Gen Ruleset
-ruleSet = vectorOf
+ruleset :: Int -> Gen Rule -> Gen Ruleset
+ruleset = vectorOf
+
+
+rulesetWithCompSelector :: Int -> Int -> Gen Ruleset
+rulesetWithCompSelector levels count =
+  ruleset count $ rule (compositeSelector levels (selector 2)) (propertySet 2)

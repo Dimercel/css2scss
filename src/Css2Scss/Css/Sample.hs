@@ -1,4 +1,15 @@
-module Css2Scss.Css.Sample () where
+module Css2Scss.Css.Sample
+  ( getSample
+  , selectorLevel
+  , selector
+  , compositeSelector
+  , property
+  , propertySet
+  , rule
+  , ruleset
+
+  , rulesetWithCompSelector
+  ) where
 
 
 import Data.HashMap ( Map(..)

@@ -9,11 +9,14 @@ module Css2Scss.Css.Sample
   , ruleset
 
   , rulesetWithCompSelector
+  , family
   ) where
 
 
 import Data.HashMap ( Map(..)
                     , fromList)
+import Data.List (cycle)
+import Control.Monad (mapM)
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
 
@@ -85,3 +88,10 @@ ruleset = vectorOf
 rulesetWithCompSelector :: Int -> Int -> Gen Ruleset
 rulesetWithCompSelector levels count =
   ruleset count $ rule (compositeSelector levels (selector 2)) (propertySet 2)
+
+familySelector :: Int -> Gen CompSelector
+familySelector count =
+    pure [take count (cycle selectorSamples)]
+
+family :: Int -> Gen Ruleset
+family size = mapM (\n -> rule (familySelector n) (propertySet 2)) [1 .. size]

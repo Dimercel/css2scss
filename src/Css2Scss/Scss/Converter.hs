@@ -45,7 +45,6 @@ import Css2Scss.Css ( Rule(..)
                     , selector
                     , toSimpleRule)
 import qualified Css2Scss.Scss as Scss
-import qualified Css2Scss.Css.Sample as S
 
 
 -- | ПОСТРОЕНИЕ SCSS-СТРУКТУР.
@@ -54,7 +53,7 @@ import qualified Css2Scss.Css.Sample as S
 --   В этом разделе нам предстоит построить SCSS-структуры на основе CSS-стилей.
 -- Основными вопросами здесь будут построение древовидной структуры SCSS на
 -- основе CSS-правил, а также вопрос принадлежности их к одной "семье".
---   Этот раздел можно условно поделить на 4 этапа:
+--   Этот раздел можно условно поделить на следующие этапы:
 -- - Отыскание составных CSS-правил и создание из них одиночных;
 -- - Группировка CSS-правил на основании принадлежности к одной "семье";
 -- - Собственно построение SCSS-структур;
@@ -103,6 +102,10 @@ scssNormalize root (Node (Rule sel props) subRules) =
   Node (Rule [(\\) (head sel) root] props)
        (map (scssNormalize (head sel)) subRules)
 
+--   Теперь мы уже можем построить SCSS-структуру по группе однокоренных CSS-правил
+-- образующих семью. Рассмотрим подробнее этот процесс. Прежде всего нам следует
+-- отсортировать список правил по уровню селектора. Таким образом "корневое" правило
+-- будет в самом начале списка, а его самый дальний дочерний элемент в последнем.
 -- Строит иерархическую scss-структуру на основе css-правил.
 -- Список должен содержать только однокоренные css-правила
 -- Например: ".item1", ".item1 .item2" ".item1 .item2 .item3"
@@ -110,13 +113,13 @@ cssFamily2Scss :: Ruleset -> Scss.Rule
 cssFamily2Scss [x] = Node x []
 cssFamily2Scss rules =
   let sortedRules = sortByLevel rules
-      toScss root [] = Node root []
-      toScss root rules =
+      go root [] = Node root []
+      go root rules =
         let onlyChildren   = filter (`isChildRule` root) rules
             hasParents x   = any (isChildRule x)
             directChildren = filter (\x -> not $ hasParents x onlyChildren) onlyChildren
-        in Node root (map (\x -> toScss x ((\\) rules directChildren)) directChildren)
-  in scssNormalize [] $ toScss (head sortedRules) (tail sortedRules)
+        in Node root (map (\x -> go x ((\\) rules directChildren)) directChildren)
+  in scssNormalize [] $ go (head sortedRules) (tail sortedRules)
 
 -- Если набор свойств scss-правила полностью совпадает
 -- с другим, то такие правила можно представить одним

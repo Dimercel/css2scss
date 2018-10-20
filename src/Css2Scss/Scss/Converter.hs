@@ -45,6 +45,7 @@ import Css2Scss.Css ( Rule(..)
                     , selector
                     , toSimpleRule)
 import qualified Css2Scss.Scss as Scss
+import qualified Css2Scss.Css.Sample as S
 
 
 -- | ПОСТРОЕНИЕ SCSS-СТРУКТУР.
@@ -64,6 +65,9 @@ import qualified Css2Scss.Scss as Scss
 -- их на одиночные. Это упростит дальнейший алгоритм.
 onlySingleRules :: Ruleset -> Ruleset
 onlySingleRules = foldr ((++) . toSimpleRule) []
+
+-- Пример:
+-- length $ onlySingleRules $ getSample 1 (S.rulesetWithCompSelector 2 2) => 4
 
 --   Далее нем предстоит сформировать "семьи" правил основываясь
 -- на их селекторах. CSS-правила принадлежат одной "семье", если

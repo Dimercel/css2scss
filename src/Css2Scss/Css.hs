@@ -19,6 +19,7 @@ module Css2Scss.Css
     , CompSelector
     , makeRule
     , levelsCount
+    , mainSelector
     , isCompositeRule
     , isChildRule
     , isDirectChildRule
@@ -91,6 +92,11 @@ levelsCount :: Rule -> Int
 levelsCount rule
   | isCompositeRule rule = 0
   | otherwise = length $ head $ get selector rule
+
+
+-- Вернет селектор одиночного правила
+mainSelector :: Rule -> SelectorT
+mainSelector r = head $ get selector r
 
 -- Является ли селектор составным?
 -- Если в селекторе присутствует запятая,

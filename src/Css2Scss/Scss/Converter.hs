@@ -39,6 +39,7 @@ import Css2Scss.Css ( Rule(..)
                     , Ruleset
                     , SelectorT
                     , levelsCount
+                    , mainSelector
                     , isChildRule
                     , isFamilyRules
                     , props
@@ -128,11 +129,11 @@ cssFamily2Scss rules =
 groupBySelector :: Scss.Ruleset -> Scss.Ruleset
 groupBySelector [] = []
 groupBySelector rules =
-  let (compound, single)        = partition Scss.hasChilds rules
-      getProps (Node rule _)    = get props rule
-      getSelector (Node rule _) = get selector rule
-      grouped      = groupBy (\x y -> getProps x == getProps y) single
-      unionRules r = Node (Rule (map (head . getSelector) r) (getProps $ head r)) []
+  let (compound, single)              = partition Scss.hasChilds rules
+      eqProps (Node x _) (Node y _)   = get props x == get props y
+      grouped                         = groupBy eqProps single
+      unionRules rules@(Node x _ :xs) =
+        Node (Rule (map (\(Node r _) -> mainSelector r) rules) (get props x)) []
   in map unionRules grouped ++ compound
 
 -- Конвертирует список css-правил в список scss-структур

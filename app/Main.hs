@@ -7,7 +7,7 @@ import Css2Scss.Css.Parser ( preprocessor
                            , stylesheet)
 import Css2Scss.Css as C
 import Css2Scss.Scss.Render (PrettyRenderer(..))
-import Css2Scss.Scss.Converter (toScssRules)
+import Css2Scss.Scss.Converter (convertCss)
 
 
 main :: IO ()
@@ -17,7 +17,7 @@ main = do
   contents <- hGetContents handle
   let tokens = parse stylesheet "" (preprocessor contents)
   case tokens of
-      Right t -> putStrLn $ concatMap renderPretty (toScssRules $ onlyRules t)
+      Right t -> putStrLn $ concatMap renderPretty (convertCss $ onlyRules t)
       Left err -> print err
   hClose handle
   where

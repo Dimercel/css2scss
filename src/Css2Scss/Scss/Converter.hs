@@ -11,7 +11,7 @@
 -- стилей. Такие наборы определяются в одно правило и затем используются по
 -- средствам SCSS директивы @extend.
 
-module Css2Scss.Scss.Converter (toScssRules) where
+module Css2Scss.Scss.Converter (convertCss) where
 
 
 import Data.List ( find
@@ -76,7 +76,7 @@ onlySingleRules = foldr ((++) . toSimpleRule) []
 groupByFamily :: Ruleset -> [Ruleset]
 groupByFamily = groupBy isFamilyRules
 
--- Сортирует список css-правил по уровню селектора.
+--   Определим сортировку CSS-правил по уровню селектора.
 -- Каждый пробел в селекторе составляет новый уровень.
 sortByLevel :: Ruleset -> Ruleset
 sortByLevel =
@@ -107,12 +107,14 @@ scssNormalize root (Node (Rule sel props) subRules) =
 -- образующих семью. Рассмотрим подробнее этот процесс. Прежде всего нам следует
 -- отсортировать список правил по уровню селектора. Таким образом "корневое" правило
 -- будет в самом начале списка, а его самый дальний дочерний элемент в последнем.
--- Строит иерархическую scss-структуру на основе css-правил.
--- Список должен содержать только однокоренные css-правила
+-- На основании этого несложно построить вложенную SCSS-структуру. Нам нужно двигаться
+-- от корня к дочерним элементам, попутно создавая вложенные SCSS-узлы. После этого
+-- остается лишь привести SCSS-селекторы в нормальную форму.
+--   Исходный список должен содержать только однокоренные CSS-правила
 -- Например: ".item1", ".item1 .item2" ".item1 .item2 .item3"
-cssFamily2Scss :: Ruleset -> Scss.Rule
-cssFamily2Scss [x] = Node x []
-cssFamily2Scss rules =
+convertCssFamily :: Ruleset -> Scss.Rule
+convertCssFamily [x] = Node x []
+convertCssFamily rules =
   let sortedRules = sortByLevel rules
       go root [] = Node root []
       go root rules =
@@ -122,13 +124,16 @@ cssFamily2Scss rules =
         in Node root (map (\x -> go x ((\\) rules directChildren)) directChildren)
   in scssNormalize [] $ go (head sortedRules) (tail sortedRules)
 
--- Если набор свойств scss-правила полностью совпадает
--- с другим, то такие правила можно представить одним
--- составным селектором. Функция отыскивает такие правила
--- и объединяет их в одно.
-groupBySelector :: Scss.Ruleset -> Scss.Ruleset
-groupBySelector [] = []
-groupBySelector rules =
+
+--   Когда в начале алгоритма мы делили составные правила на простые, это
+-- было необходимо для простоты последующих операций. Теперь же, из-за этого
+-- может возникнуть ситуация когда набор свойств SCSS-правила полностью
+-- совпадает с другим. Такие правила можно объединить в один SCSS-узел.
+--   Стоит упомянуть что такой процесс происходит только для одиночных
+-- SCSS-узлов, у которых нет дочерних.
+unionBySelector :: Scss.Ruleset -> Scss.Ruleset
+unionBySelector [] = []
+unionBySelector rules =
   let (compound, single)              = partition Scss.hasChilds rules
       eqProps (Node x _) (Node y _)   = get props x == get props y
       grouped                         = groupBy eqProps single
@@ -136,13 +141,14 @@ groupBySelector rules =
         Node (Rule (map (\(Node r _) -> mainSelector r) rules) (get props x)) []
   in map unionRules grouped ++ compound
 
--- Конвертирует список css-правил в список scss-структур
-toScssRules :: Ruleset -> Scss.Ruleset
-toScssRules rules =
+-- После описания всех составляющих алгоритма, осталось лишь объединить все
+-- шаги и получить результат.
+convertCss :: Ruleset -> Scss.Ruleset
+convertCss rules =
   let preProcess = foldr (\x acc -> if hasOnlyOneRoot x
                                     then x : acc else acc ++ [[y] | y <- x])
                          [] (groupByFamily $ onlySingleRules rules)
-  in groupBySelector $ map cssFamily2Scss preProcess
+  in unionBySelector $ map convertCssFamily preProcess
 
 
 

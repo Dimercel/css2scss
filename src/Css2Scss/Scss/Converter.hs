@@ -94,6 +94,9 @@ hasOnlyOneRoot rules =
   let withoutElem x = filter (x /=)
   in any (\x -> all (`isChildRule` x) (withoutElem x rules)) rules
 
+-- Пример:
+-- hasOnlyOneRoot $ getSample 1 (family 3) => True
+
 --   При построении SCSS-структуры стоит заметить, что в исходных CSS-правилах
 -- все селекторы абсолютны. То есть селектор всегда описывает путь от самого
 -- корня и до оконечного звена. Это является следствием линейной структуры CSS.

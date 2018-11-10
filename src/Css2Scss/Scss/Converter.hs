@@ -69,12 +69,15 @@ onlySingleRules = foldr ((++) . toSimpleRule) []
 -- Пример:
 -- length $ onlySingleRules $ getSample 1 (S.rulesetWithCompSelector 2 2) => 4
 
---   Далее нем предстоит сформировать "семьи" правил основываясь
+--   Далее нам предстоит сформировать "семьи" правил основываясь
 -- на их селекторах. CSS-правила принадлежат одной "семье", если
 -- у них есть одинаковый корень в селекторе.
 -- Например селекторы: .item1 и .item1 .item2 принадлежат одной семье.
 groupByFamily :: Ruleset -> [Ruleset]
 groupByFamily = groupBy isFamilyRules
+
+-- Пример:
+-- length $ groupByFamily $ getSample 1 (family 3) ++ getSample 42 (family 4) => 2
 
 --   Определим сортировку CSS-правил по уровню селектора.
 -- Каждый пробел в селекторе составляет новый уровень.

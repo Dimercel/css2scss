@@ -15,7 +15,7 @@ module Css2Scss.Css.Sample
 
 import Data.HashMap ( Map(..)
                     , fromList)
-import Data.List (cycle)
+import Data.List (cycle, inits, tail)
 import Control.Monad (mapM)
 import Test.QuickCheck.Gen
 import Test.QuickCheck.Random
@@ -89,9 +89,15 @@ rulesetWithCompSelector :: Int -> Int -> Gen Ruleset
 rulesetWithCompSelector levels count =
   ruleset count $ rule (compositeSelector levels (selector 2)) (propertySet 2)
 
-familySelector :: Int -> Gen CompSelector
-familySelector count =
-    pure [take count (cycle selectorSamples)]
+familySelectors :: Int -> Gen [SelectorT]
+familySelectors count =
+  do
+    l <- shuffle selectorSamples
+    let base = take count (cycle l)
+    return $ tail $ inits base
 
 family :: Int -> Gen Ruleset
-family size = mapM (\n -> rule (familySelector n) (propertySet 2)) [1 .. size]
+family size =
+  do
+    selectors <- familySelectors size
+    mapM (\sel -> rule (pure [sel]) (propertySet 2)) selectors

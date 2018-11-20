@@ -4,6 +4,7 @@ module Css2Scss.Scss
     ( Rule(..)
     , Ruleset
     , Variable(..)
+    , FontFace(..)
     , Extend
     , varIdent
     , varValue
@@ -21,13 +22,12 @@ import qualified Css2Scss.Css as Css
 -- и css-правило, но с поддержкой древовидной
 -- структуры
 type Rule     = Tree Css.Rule
-
 type Ruleset  = [Rule]
-
 data Variable = Variable { _varIdent
                          , _varValue :: String
                          } deriving(Show, Eq)
 
+newtype FontFace = FontFace String deriving(Show, Eq)
 type Extend   = Rule
 
 mkLabels [''Variable]

@@ -117,7 +117,7 @@ scssNormalize root (Node (Rule sel props) subRules) =
 -- от корня к дочерним элементам, попутно создавая вложенные SCSS-узлы. После этого
 -- остается лишь привести SCSS-селекторы в нормальную форму.
 --   Исходный список должен содержать только однокоренные CSS-правила
--- Например: ".item1", ".item1 .item2" ".item1 .item2 .item3"
+-- Например: ".item1", ".item1 .item2", ".item1 .item2 .item3"
 convertCssFamily :: Ruleset -> Scss.Rule
 convertCssFamily [x] = Node x []
 convertCssFamily rules =

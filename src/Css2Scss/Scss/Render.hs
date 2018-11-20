@@ -11,7 +11,8 @@ import Data.Tree (Tree(..))
 import Data.Label
 
 import qualified Css2Scss.Css as Css
-import Css2Scss.Scss (Rule(..))
+import Css2Scss.Scss ( Rule(..)
+                     , FontFace(..))
 import Css2Scss.Utils (eol)
 
 
@@ -48,6 +49,7 @@ instance PrettyRenderer Rule where
   renderPretty rule =
     let renderWithIndent (Node rule subrules) spacer level =
           concat [
+            eol,
             levelSpacer,
             renderPretty $ get Css.selector rule,
             " {",
@@ -57,7 +59,6 @@ instance PrettyRenderer Rule where
             concatMap (\x -> renderWithIndent x spacer (level + 1)) subrules,
             if null subrules then "" else levelSpacer,
             "}",
-            eol,
             eol
           ]
           where levelSpacer = concat $ replicate level spacer
@@ -65,6 +66,13 @@ instance PrettyRenderer Rule where
                 indentProps = concatMap (\x -> levelSpacer ++ spacer ++ x) renderedProps
     in renderWithIndent rule "    " 0
 
+instance PrettyRenderer FontFace where
+  renderPretty (FontFace str) =
+    concat [
+      eol,
+      "@font-face ",
+      str
+    ]
 
 class MinifyRenderer a where
     renderMinify :: a -> String

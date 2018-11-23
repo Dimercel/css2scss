@@ -64,7 +64,7 @@ ignoreComments =
         gsub [re|\/\*[^*]*\*+([^/*][^*]*\*+)*\/|] (" " :: String)
 
 decl2String :: (String, String) -> String
-decl2String (x, y) = x ++ y
+decl2String (x, y) = concat [x, ": ", y]
 
 
 stylesheet :: Parser [CssItem]
@@ -235,9 +235,9 @@ page =
             res <- sequence [
                 count 1 (L._STATIC ";"),
                 many L._S,
-                (do
+                do
                     d <- declaration
-                    return [(L.Static, decl2String d)])]
+                    return [(L.Static, decl2String d)]]
             return $ concat res),
         count 1 (L._STATIC "}"),
         many L._S]

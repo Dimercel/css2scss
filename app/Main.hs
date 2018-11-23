@@ -8,7 +8,7 @@ import Css2Scss.Css.Parser ( preprocessor
 import Css2Scss.Css as C
 import Css2Scss.Scss as S
 import Css2Scss.Scss.Render (PrettyRenderer(..))
-import Css2Scss.Scss.Converter (convertCss)
+import Css2Scss.Scss.Converter (convertCss, convertDefinition)
 
 
 main :: IO ()
@@ -20,14 +20,13 @@ main = do
   case tokens of
       Right t -> do
         putStrLn $ concatMap renderPretty (convertCss $ onlyRules t)
-        putStrLn $ concatMap (renderPretty . convertFontFace) (onlyFontFace t)
+        putStrLn $ concatMap (renderPretty . convertDefinition) (onlyDefinitions t)
       Left err -> print err
   hClose handle
   where
-    convertFontFace (C.Definition C.FontFace x) = S.FontFace x
     isRule (C.RuleItem _) = True
     isRule _ = False
-    isFontFace (C.DefItem (C.Definition C.FontFace _)) = True
-    isFontFace _ = False
+    isDefinition (C.DefItem _) = True
+    isDefinition _ = False
     onlyRules x = map (\(C.RuleItem x) -> x) (filter isRule x)
-    onlyFontFace x = map(\(C.DefItem x) -> x) (filter isFontFace x)
+    onlyDefinitions x = map (\(C.DefItem x) -> x) (filter isDefinition x)

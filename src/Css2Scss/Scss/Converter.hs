@@ -11,7 +11,7 @@
 -- стилей. Такие наборы определяются в одно правило и затем используются по
 -- средствам SCSS директивы @extend.
 
-module Css2Scss.Scss.Converter (convertCss) where
+module Css2Scss.Scss.Converter (convertCss, convertDefinition) where
 
 
 import Data.List ( find
@@ -38,6 +38,8 @@ import Css2Scss.Css.Parser ( stylesheet
 import Css2Scss.Css ( Rule(..)
                     , Ruleset
                     , SelectorT
+                    , Definition(..)
+                    , DefinitionT(..)
                     , levelsCount
                     , mainSelector
                     , isChildRule
@@ -156,6 +158,12 @@ convertCss rules =
                          [] (groupByFamily $ onlySingleRules rules)
   in unionBySelector $ map convertCssFamily preProcess
 
+convertDefinition :: Definition -> Scss.Definition
+convertDefinition (Definition Import x)    = Scss.Definition Scss.Import x
+convertDefinition (Definition Page x)      = Scss.Definition Scss.Page x
+convertDefinition (Definition FontFace x)  = Scss.Definition Scss.FontFace x
+convertDefinition (Definition Charset x)   = Scss.Definition Scss.Charset x
+convertDefinition (Definition Namespace x) = Scss.Definition Scss.Namespace x
 
 
 -- | АВТОМАТИЧЕСКОЕ СОЗДАНИЕ ПЕРЕМЕННЫХ.

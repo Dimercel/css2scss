@@ -12,7 +12,8 @@ import Data.Label
 
 import qualified Css2Scss.Css as Css
 import Css2Scss.Scss ( Rule(..)
-                     , FontFace(..))
+                     , Definition(..)
+                     , DefinitionT(..))
 import Css2Scss.Utils (eol)
 
 
@@ -66,12 +67,41 @@ instance PrettyRenderer Rule where
                 indentProps = concatMap (\x -> levelSpacer ++ spacer ++ x) renderedProps
     in renderWithIndent rule "    " 0
 
-instance PrettyRenderer FontFace where
-  renderPretty (FontFace str) =
+instance PrettyRenderer Definition where
+  renderPretty (Definition FontFace str) =
     concat [
       eol,
       "@font-face ",
-      str
+      str,
+      eol
+    ]
+  renderPretty (Definition Import str) =
+    concat [
+      eol,
+      "@import ",
+      str,
+      eol
+    ]
+  renderPretty (Definition Page str) =
+    concat [
+      eol,
+      "@page ",
+      str,
+      eol
+    ]
+  renderPretty (Definition Charset str) =
+    concat [
+      eol,
+      "@charset ",
+      str,
+      eol
+    ]
+  renderPretty (Definition Namespace str) =
+    concat [
+      eol,
+      "@namespace ",
+      str,
+      eol
     ]
 
 class MinifyRenderer a where

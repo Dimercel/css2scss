@@ -4,7 +4,8 @@ module Css2Scss.Scss
     ( Rule(..)
     , Ruleset
     , Variable(..)
-    , FontFace(..)
+    , Definition(..)
+    , DefinitionT(..)
     , Extend
     , varIdent
     , varValue
@@ -27,7 +28,14 @@ data Variable = Variable { _varIdent
                          , _varValue :: String
                          } deriving(Show, Eq)
 
-newtype FontFace = FontFace String deriving(Show, Eq)
+data DefinitionT = Import | Page | FontFace | Charset | Namespace
+                   deriving (Show, Eq)
+
+data Definition = Definition { _defName :: DefinitionT
+                             , _defValue :: String
+                             } deriving (Eq, Show)
+
+
 type Extend   = Rule
 
 mkLabels [''Variable]
